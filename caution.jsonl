@@ -1,0 +1,3 @@
+{"date":"2026-10-14","level":"INFO","topic":"scaffold","message":"This is a scaffold, not a functional timer integration. Define and approve runtime behavior before adding setup, config flow, platforms or services."}
+{"date":"2026-10-14","level":"WARN","topic":"release_metadata","message":"Replace YOUR_GITHUB_USERNAME in manifest URLs and populate codeowners with the actual maintainer before publication. Confirm repository ownership, licensing, brand requirements and supported Home Assistant versions."}
+{"date":"2026-10-14","level":"INFO","topic":"git","message":"The workspace started without a Git repository or remote. A dev push requires a configured remote; do not claim a remote backup or publish to web/main without the required authorization."}

@@ -1,0 +1,10 @@
+{
+  "domain": "assist_timers",
+  "name": "Assist Timers",
+  "codeowners": [],
+  "dependencies": [],
+  "documentation": "https://github.com/YOUR_GITHUB_USERNAME/assist_timers",
+  "issue_tracker": "https://github.com/YOUR_GITHUB_USERNAME/assist_timers/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
