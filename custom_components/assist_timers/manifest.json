@@ -2,9 +2,12 @@
   "domain": "assist_timers",
   "name": "Assist Timers",
   "codeowners": [],
-  "dependencies": [],
+  "config_flow": true,
+  "dependencies": ["assist_satellite", "http", "llm", "media_player"],
   "documentation": "https://github.com/YOUR_GITHUB_USERNAME/assist_timers",
   "issue_tracker": "https://github.com/YOUR_GITHUB_USERNAME/assist_timers/issues",
+  "integration_type": "service",
+  "iot_class": "calculated",
   "requirements": [],
   "version": "0.1.0"
 }

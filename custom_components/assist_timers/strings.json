@@ -1,0 +1,29 @@
+{
+  "title": "Assist Timers",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect an Assist satellite",
+        "description": "Choose the originating satellite and its normal alarm media player. Enable the Assist Timers tool provider in your existing LLM conversation agent. Each satellite and media player may only be configured once.",
+        "data": {"satellite": "Assist satellite", "media_player": "Alarm media player"}
+      },
+      "reconfigure": {
+        "title": "Update satellite settings",
+        "description": "Cancel any active timer before updating the media player. To change the satellite device, remove this entry and add a new one.",
+        "data": {"satellite": "Assist satellite", "media_player": "Alarm media player"}
+      }
+    },
+    "error": {
+      "invalid_satellite": "Select an existing Assist satellite.",
+      "invalid_player": "Select an existing media player.",
+      "announce_not_supported": "The satellite must support announcements.",
+      "play_stop_not_supported": "The media player must support playback and stop.",
+      "satellite_no_device": "The satellite must belong to a registered device.",
+      "satellite_already_configured": "This satellite device is already configured.",
+      "player_already_configured": "This media player already belongs to another satellite timer.",
+      "cannot_change_satellite": "The satellite device cannot be changed in this entry.",
+      "cancel_timer_before_reconfigure": "Cancel the existing timer before reconfiguring."
+    },
+    "abort": {"already_configured": "This satellite is already configured.", "reconfigure_successful": "Settings updated."}
+  }
+}

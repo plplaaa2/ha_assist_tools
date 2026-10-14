@@ -1,30 +1,123 @@
 # Assist Timers
 
-Home Assistant용 HACS 사용자 정의 통합 구성요소의 개발 골격입니다.
+Assist 위성별로 하나의 타이머를 관리하는 Home Assistant용 HACS 사용자 정의 통합입니다.
 
 - 버전: `0.1.0`
 - 도메인: `assist_timers`
-- 상태: 기본 파일 구조만 생성한 초기 개발 단계
+- 지원 기준: Home Assistant `2026.10.1` 이상
+- 상태: 로컬 구현 및 단위 테스트 완료, 실제 HA·위성 검증 대기
 
 ## 현재 범위
 
-Home Assistant의 최소 통합 파일 구성과 HACS 저장소 구조를 마련했습니다.
-타이머 기능, 엔티티, 서비스 및 설정 화면은 아직 구현하지 않았습니다.
-현재 상태에서는 설정 화면에서 추가하거나 타이머를 사용할 수 없습니다.
-`const.py`는 도메인 상수를 정의하고, 버전은 `manifest.json`에서 관리합니다.
+기존 LLM 대화 에이전트에서 선택하는 **Assist Timers** Tool provider를 제공합니다.
+명령을 받은 HA 장치 ID로 등록된 위성을 찾으며, 다른 위성을 도구 인자로 지정할 수 없습니다.
+HA에 등록된 장치 ID가 없는 앱·브라우저 대화에는 타이머 도구를 제공하지 않습니다.
+
+각 타이머에 고유 ID를 발급하고 이름을 선택적으로 지정할 수 있습니다.
+실행 중·일시정지·알람 재생·오류 상태도 위성의 한 슬롯을 차지합니다.
+기존 타이머가 있으면 새 생성을 거절하며, 덮어쓰지 않습니다.
+시간 범위는 1초부터 7일까지이고, 일시정지 후 재개하면 남은 시간만 진행합니다.
+
+| 동작 | 재생 방식 및 문구 |
+|---|---|
+| 5분 설정 | 위성 `announce`: “설정한 5분 알람이 설정되었습니다.” |
+| 일시정지 | 위성 `announce`: “설정한 5분 알람을 일시정지하였습니다.” |
+| 재개 | 위성 `announce`: “설정한 5분 알람을 재개하였습니다.” |
+| 만료 전 취소·중지 | 위성 `announce`: “설정한 5분 알람을 중지하였습니다.” |
+| 만료 | 연결한 플레이어에서 MP3를 **일반 미디어**로 60초 재생 |
+| 알람 재생 중 취소·중지 | 플레이어 정지 명령 전송, 추가 `announce` 없음; 기존 에이전트의 확인 음성은 허용 |
+
+확인 문구의 시간은 처음 설정한 전체 시간입니다. 확인 음성에는 별도 차임을 넣지 않습니다.
+LLM에는 이미 예약된 확인 문구를 반복하지 않도록 안내하지만, 추가 발화는 모델에 따라 나올 수 있습니다.
+음성 취소는 STT와 LLM이 취소 도구를 호출한 시점에 플레이어 정지 명령을 보냅니다.
+실제 스피커 정지 지연은 네트워크와 장치에 따라 달라집니다.
+
+## 로컬 설치 및 설정
+
+1. `custom_components/assist_timers/` 전체를 HA 설정 폴더의 같은 경로로 복사하고 재시작합니다.
+   로컬 설치 ZIP은 HA 설정 폴더에 풀면 위 경로가 만들어집니다. 기존 타이머 통합을 사용 중이라면 덮어쓰기 전에 백업하세요.
+2. **설정 → 기기 및 서비스 → 통합 추가 → Assist Timers**에서 위성과 알람 미디어 플레이어를 연결합니다.
+3. 위성은 `ANNOUNCE`, 플레이어는 `PLAY_MEDIA`와 `STOP` 기능을 지원해야 합니다. 위성별로 한 번씩 설정하며 플레이어도 다른 항목과 중복 연결할 수 없습니다.
+4. 기존 LLM 대화 에이전트의 **Tool providers / Home Assistant API 선택**에서 **Assist Timers**를 활성화합니다. 메뉴 명칭은 대화 에이전트에 따라 다릅니다. 새로운 대화 에이전트로 바꿀 필요는 없습니다.
+5. 테스트용 음성 파이프라인에서 **Prefer handling commands locally**를 끕니다. 켜면 HA 내장 에이전트가 타이머 명령을 먼저 처리하여 이 도구를 호출하지 않을 수 있습니다.
+6. 내장 Assist API를 함께 선택하면 다른 기기 제어도 가능하지만 내장 타이머 도구도 제공될 수 있습니다. 우선 Assist Timers만 선택해 타이머 도구 호출을 검증하세요.
+7. 위성과 미디어 플레이어에서 HA의 내부 URL에 접근할 수 있어야 합니다. HA 네트워크 설정의 내부 URL을 확인하세요.
+
+일반 미디어 재생은 해당 플레이어의 현재 미디어를 대체할 수 있습니다.
+원본 MP3는 보존하고, 이를 반복한 `alarm_60s.mp3`를 재생합니다.
+재생 파일 자체가 60초로 제한되며 자동 정지 예약도 설정합니다.
+공개 정적 URL `/assist_timers/sounds/alarm_60s.mp3`에는 이 알람 파일 하나만 제공합니다.
+HACS 공개 등록은 아직 하지 않았습니다. 로컬 ZIP은 수동 설치용이며 HACS 릴리스 ZIP 설정은 사용하지 않습니다.
+
+## 수명 주기 및 복원
+
+- 생성·일시정지·재개 상태를 HA `.storage`에 저장합니다.
+- 실행 중 남은 시간은 단조 시계로 계산하고, 재시작 후에는 저장된 만료 시각을 사용합니다.
+- 재시작 전에 일시정지된 타이머는 남은 시간을 그대로 유지합니다.
+- HA가 꺼진 동안 이미 만료된 타이머는 재시작 시 제거하고 뒤늦게 알람을 재생하지 않습니다.
+- 재시작 전 울리던 알람에는 정지 명령을 보내고 새로 재생하지 않습니다.
+- 재생·정지 실패는 상태의 `last_error`로 확인할 수 있습니다. 정지 실패 시 슬롯을 유지하여 취소를 다시 시도할 수 있게 합니다.
+- 설정에서 플레이어를 바꾸기 전에는 타이머를 취소해야 합니다. 위성 장치를 바꾸려면 항목을 삭제하고 다시 추가합니다.
+
+## HA에서 검증하기
+
+먼저 개발자 도구의 작업에서 짧은 타이머로 테스트합니다.
+
+```yaml
+action: assist_timers.create
+data:
+  satellite: assist_satellite.kitchen
+  duration_seconds: 10
+  name: 테스트
+```
+
+조회는 `assist_timers.status`, 일시정지는 `assist_timers.pause`, 재개는 `assist_timers.resume`,
+취소는 `assist_timers.cancel` 또는 `assist_timers.stop`을 사용합니다.
+각 작업의 `satellite`에는 설정한 위성 엔티티 ID를 넣습니다.
+작업 응답을 요청하면 ID, 상태, 처음 설정한 시간과 남은 시간을 확인할 수 있습니다.
+`timer_id`를 넣으면 현재 타이머와 일치하는지 검사하며, 생략하면 해당 위성의 단일 타이머를 제어합니다.
+
+```yaml
+action: assist_timers.cancel
+data:
+  satellite: assist_satellite.kitchen
+```
+
+다음 순서로 실제 장치에서 확인합니다.
+
+1. 10초 설정 후 지정 문구가 `announce`로 나오고, 만료 시 알람이 일반 미디어로 재생되는지 확인합니다.
+2. 알람을 그대로 두면 약 1분 후 정지하는지 확인합니다.
+3. 다시 설정하고 울리는 동안 “타이머 취소”를 말해 재생이 중단되는지 확인합니다. 확인 음성은 허용합니다.
+4. 5분 타이머를 일시정지·재개하고, 원래 시간 문구와 실제 남은 시간이 분리되는지 확인합니다.
+5. 같은 위성에서 두 번째 타이머 생성을 시도하고 중복 거절을 확인합니다.
+6. 두 위성에서 동시에 설정하여 한쪽 취소가 다른 쪽 타이머에 영향을 주지 않는지 확인합니다.
+7. 음성 디버그 추적에서 `AssistTimersCreate` / `AssistTimersCancel` 등의 도구가 호출되었는지 확인합니다.
+
+## Windows 개발 검증
+
+```powershell
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements-dev.txt
+.venv/Scripts/python -m pytest -q
+.venv/Scripts/ruff check custom_components tests tools
+.venv/Scripts/ruff format --check custom_components tests tools
+git diff --check
+```
+
+테스트는 타이머 핵심 로직과 HA 공개 API를 모사한 경계를 검사합니다.
+실제 Home Assistant 실행, 위성의 음성 인식, 스피커 재생 완료를 대신하지 않습니다.
+원본 알람을 바꾼 경우 `.venv/Scripts/python tools/prepare_alarm.py`로 60초 파일을 다시 생성합니다.
 
 ## 개발 및 배포 전 준비
 
 1. `manifest.json`의 `YOUR_GITHUB_USERNAME`을 실제 저장소 소유자 또는 조직명으로 교체하고 저장소 주소를 확인합니다.
 2. `codeowners`에 실제 유지관리자의 GitHub 사용자명(`@사용자명`)을 등록합니다.
-3. 기능과 지원 Home Assistant 버전을 정한 뒤 로직 변경 계획을 승인받습니다.
-4. 필요한 경우 `config_flow.py`, `strings.json`, `translations/ko.json`, 플랫폼 파일 및 `services.yaml`을 추가합니다. 설정 흐름 구현 시에만 manifest에 `config_flow: true`를 설정합니다.
-5. Home Assistant 실행 환경에서 검증하고 HACS 검증을 수행합니다. HACS 등록 시 공식 문서의 브랜드 이미지 요건도 확인합니다.
+3. 실제 Home Assistant와 위성에서 위 검증 절차를 완료합니다.
+4. 배포 전 프로젝트 및 제공된 알람 사운드의 라이선스를 확인합니다.
+5. HACS 검증을 수행하고 공식 문서의 브랜드 이미지 요건도 확인합니다.
 6. 공개 GitHub 저장소의 설명과 주제를 설정하고, 버전별 배포가 필요하면 `0.1.0` GitHub Release를 발행합니다.
 
-설치 가능한 구현이 완성되면 HACS 사용자 정의 저장소에 공개 저장소 URL을 **Integration** 유형으로 등록합니다.
-수동 설치 시에는 `custom_components/assist_timers/`를 Home Assistant 설정 폴더의 같은 경로로 복사합니다.
-설치 후 재시작 및 설정 방법은 구현 완료 시 보완합니다.
+공개 저장소를 준비한 후 HACS 사용자 정의 저장소에 공개 저장소 URL을 **Integration** 유형으로 등록합니다.
 
 ## 개발 관리
 
@@ -34,6 +127,8 @@ Home Assistant의 최소 통합 파일 구성과 HACS 저장소 구조를 마련
 - 소스와 문서는 UTF-8(BOM 없음)으로 유지합니다.
 - Git은 로컬 `dev` 브랜치부터 관리합니다. 원격 저장소 연결 전에는 push할 수 없습니다.
 - 로그 기능을 구현할 때 기본 레벨은 INFO로 하고, 인증 정보를 기록하지 않습니다.
+- 이 통합의 로그는 HA의 기본 로그 레벨을 따릅니다. 정상 동작은 INFO, 복원 주의사항은 WARN, 출력 실패는 ERROR로 기록하며 글로벌 로그 설정을 바꾸지 않습니다.
+- 원본은 `backup/scaffold-before-implementation.zip`과 로컬 `dev` 백업 커밋에 보존했습니다. 사용자 요청에 따라 원격 업로드는 테스트 이후로 보류합니다.
 
 ## 공식 개발 문서
 
@@ -41,5 +136,8 @@ Home Assistant의 최소 통합 파일 구성과 HACS 저장소 구조를 마련
 - [HACS 공통 요구사항 및 hacs.json](https://hacs.dev/docs/publish/start/)
 - [Home Assistant 통합 파일 구조](https://developers.home-assistant.io/docs/creating_integration_file_structure/)
 - [Home Assistant manifest 규격](https://developers.home-assistant.io/docs/creating_integration_manifest/)
+- [LLM API 및 도구 등록](https://developers.home-assistant.io/docs/core/llm/)
+- [Assist 위성의 announce 기능](https://developers.home-assistant.io/docs/core/entity/assist-satellite/)
+- [로컬 명령 우선 처리 설명](https://www.home-assistant.io/blog/2025/02/13/voice-chapter-9-speech-to-phrase/)
 
 문서 확인일: 2026-10-14.

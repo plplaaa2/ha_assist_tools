@@ -1,0 +1,83 @@
+# Describe lifecycle actions; related files: __init__.py and timer_manager.py.
+create:
+  name: Create satellite timer
+  description: Create the only timer on a configured satellite; announce confirmation.
+  fields:
+    satellite:
+      name: Satellite
+      required: true
+      selector:
+        entity:
+          domain: assist_satellite
+    duration_seconds:
+      name: Duration in seconds
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 604800
+          mode: box
+    name:
+      name: Timer name
+      selector:
+        text:
+pause:
+  name: Pause satellite timer
+  description: Preserve remaining time and announce the original duration.
+  fields:
+    satellite:
+      required: true
+      selector:
+        entity:
+          domain: assist_satellite
+    timer_id:
+      selector:
+        text:
+resume:
+  name: Resume satellite timer
+  description: Resume the preserved remaining duration.
+  fields:
+    satellite:
+      required: true
+      selector:
+        entity:
+          domain: assist_satellite
+    timer_id:
+      selector:
+        text:
+cancel:
+  name: Cancel satellite timer
+  description: Cancel the timer and stop media; no announcement while ringing.
+  fields:
+    satellite:
+      required: true
+      selector:
+        entity:
+          domain: assist_satellite
+    timer_id:
+      selector:
+        text:
+stop:
+  name: Stop satellite timer
+  description: Same as cancel; stops the alarm without an additional announcement.
+  fields:
+    satellite:
+      required: true
+      selector:
+        entity:
+          domain: assist_satellite
+    timer_id:
+      selector:
+        text:
+status:
+  name: Get satellite timer status
+  description: Return the timer ID, original duration, state, and remaining seconds.
+  fields:
+    satellite:
+      required: true
+      selector:
+        entity:
+          domain: assist_satellite
+    timer_id:
+      selector:
+        text:
