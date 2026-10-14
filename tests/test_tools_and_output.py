@@ -78,7 +78,7 @@ async def test_concurrent_duplicate_calls_create_once(endpoints):
     assert sum(result.get("replayed", False) for result in results) == 2
 
 
-async def test_api_only_exposes_tools_for_configured_origin(
+async def test_api_exposes_text_targets_but_keeps_voice_origin_fixed(
     endpoints, load_module, hass, ha_contract
 ):
     api = load_module("llm").AssistTimersAPI(hass=hass, id="assist_timers", name="Assist Timers")
@@ -87,7 +87,63 @@ async def test_api_only_exposes_tools_for_configured_origin(
     assert all(tool.integration == "assist_timers" for tool in instance.tools)
     assert "satellite" not in instance.tools[0].parameters.schema
     unknown = await api.async_get_api_instance(ha_contract.LLMContext("phone"))
-    assert unknown.tools == []
+    assert len(unknown.tools) == 5
+    assert any(str(key) == "satellite" for key in unknown.tools[0].parameters.schema)
+
+
+async def test_text_single_satellite_auto_selects(endpoints, load_module, hass, ha_contract):
+    bedroom = endpoints.endpoints.pop("bedroom")
+    await bedroom.async_close()
+    tool = load_module("llm").TimerTool("create")
+    result = await tool.async_call(
+        hass,
+        ha_contract.ToolInput(tool.name, {"duration_seconds": 30}),
+        ha_contract.LLMContext(None),
+    )
+    assert not result.error
+    assert result.data["satellite"] == "assist_satellite.kitchen"
+    assert result.data["response_mode"] == "normal"
+
+
+async def test_text_multiple_satellites_require_selection(
+    endpoints, load_module, hass, ha_contract
+):
+    tool = load_module("llm").TimerTool("create")
+    result = await tool.async_call(
+        hass,
+        ha_contract.ToolInput(tool.name, {"duration_seconds": 30}),
+        ha_contract.LLMContext(None),
+    )
+    assert result.error and result.data["error"] == "target_satellite_required"
+    assert all(ep.manager.timer is None for ep in endpoints.endpoints.values())
+
+
+async def test_text_explicit_target_and_controls(endpoints, load_module, hass, ha_contract):
+    tools = load_module("llm")
+    bedroom = endpoints.for_device("bedroom")
+    bedroom.queue_announcement = AsyncMock()
+    for op, extra in (
+        ("create", {"duration_seconds": 30}),
+        ("pause", {}),
+        ("resume", {}),
+        ("cancel", {}),
+    ):
+        tool = tools.TimerTool(op)
+        result = await tool.async_call(
+            hass,
+            ha_contract.ToolInput(
+                tool.name, {"satellite": "assist_satellite.bedroom", **extra}, op
+            ),
+            ha_contract.LLMContext("browser"),
+        )
+        assert not result.error and result.data["response_mode"] == "normal"
+    bedroom.queue_announcement.assert_not_called()
+    assert endpoints.for_device("kitchen").manager.timer is None
+
+
+def test_voice_cannot_redirect_to_other_satellite(endpoints, load_module):
+    with pytest.raises(load_module("timer_manager").TimerError, match="cannot_redirect"):
+        endpoints.for_request("kitchen", "assist_satellite.bedroom")
 
 
 async def test_confirmations_and_ringing_cancel_response(endpoints, load_module, hass, ha_contract):

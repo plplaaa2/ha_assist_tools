@@ -113,3 +113,27 @@ class Runtime:
     def log_operation_error(self, operation: str) -> None:
         """Log failure details locally without including conversation text."""
         _LOGGER.exception("Assist timer operation failed: %s", operation)
+
+    def for_request(self, device_id: str | None, satellite: str | None = None) -> Endpoint:
+        """Route voice by origin and text by selection; related file: llm.py.
+
+        A known voice satellite cannot redirect its tools to another satellite.
+        Text requests may select only a configured live endpoint.
+        """
+        live = [ep for ep in self.endpoints.values() if not ep.closed]
+        origins = [ep for ep in live if device_id and ep.device_id == device_id]
+        if origins:
+            origin = self.for_device(device_id)
+            if satellite and origin.output.satellite != satellite:
+                raise TimerError("cannot_redirect_voice_satellite")
+            return origin
+        if satellite:
+            matches = [ep for ep in live if ep.output.satellite == satellite]
+            if len(matches) != 1:
+                raise TimerError("target_satellite_not_configured")
+            return matches[0]
+        if len(live) == 1:
+            return live[0]
+        if not live:
+            raise TimerError("no_satellites_configured")
+        raise TimerError("target_satellite_required")
