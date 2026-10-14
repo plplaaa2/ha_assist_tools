@@ -1,4 +1,4 @@
-"""Set up timer storage/API/media; related files: manifest, runtime, and LLM."""
+"""Set up alarms and device jobs; related files: runtime, LLM, and device_control."""
 
 import logging
 from pathlib import Path
@@ -23,9 +23,11 @@ from .const import (
     MAX_DURATION,
     STORAGE_VERSION,
 )
+from .device_control import DeviceControl
 from .llm import register_api
 from .runtime import Endpoint, Runtime
 from .satellite import SatelliteOutput, validate_entities
+from .scheduled_actions import ScheduledActions
 from .timer_manager import TimerError, TimerManager, duration_text
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,6 +36,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Serve only the bundled alarm and register the shared tool provider."""
     runtime = Runtime()
+    runtime.control = DeviceControl(hass)
     hass.data[DOMAIN] = runtime
     await hass.http.async_register_static_paths(
         [
@@ -45,6 +48,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     runtime.unregister_api = register_api(hass)
 
     async def shutdown(_event) -> None:
+        if runtime.actions is not None:
+            await runtime.actions.async_close()
         for endpoint in list(runtime.endpoints.values()):
             try:
                 await endpoint.async_close()
@@ -88,6 +93,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.exception("Could not stop alarm during failed state restoration")
         raise ConfigEntryNotReady("Timer state could not be restored") from err
     runtime.endpoints[entry.entry_id] = endpoint
+    try:
+        async with runtime.actions_lock:
+            if runtime.actions is None:
+                action_store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.scheduled_actions")
+                actions = ScheduledActions(runtime.control.async_execute, action_store.async_save)
+                try:
+                    await actions.async_restore(await action_store.async_load())
+                except Exception:
+                    await actions.async_close()
+                    raise
+                runtime.actions = actions
+    except Exception as err:
+        runtime.endpoints.pop(entry.entry_id, None)
+        await endpoint.async_close()
+        raise ConfigEntryNotReady("Scheduled action state could not be restored") from err
     _LOGGER.info("Assist Timers ready for %s", satellite)
     return True
 
@@ -109,12 +129,20 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if endpoint:
         await endpoint.async_close()
     runtime.endpoints.pop(entry.entry_id, None)
+    async with runtime.actions_lock:
+        if not runtime.endpoints and runtime.actions is not None:
+            await runtime.actions.async_close()
+            runtime.actions = None
     return True
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Remove persisted timer data only when the configuration is deleted."""
     await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}").async_remove()
+    if not any(
+        other.entry_id != entry.entry_id for other in hass.config_entries.async_entries(DOMAIN)
+    ):
+        await Store(hass, STORAGE_VERSION, f"{DOMAIN}.scheduled_actions").async_remove()
 
 
 def register_services(hass: HomeAssistant, runtime: Runtime) -> None:
@@ -172,4 +200,41 @@ def register_services(hass: HomeAssistant, runtime: Runtime) -> None:
             handle,
             schema=probatio.Schema(fields),
             supports_response=SupportsResponse.OPTIONAL,
+        )
+    register_action_services(hass, runtime)
+
+
+def register_action_services(hass: HomeAssistant, runtime: Runtime) -> None:
+    """Expose job creation/list/cancel; related files: action_tools and services.yaml."""
+    from .action_tools import perform_action_operation
+
+    async def handle(call: ServiceCall) -> dict | None:
+        try:
+            result = await perform_action_operation(
+                runtime,
+                call.service,
+                dict(call.data),
+                getattr(call.context, "user_id", None),
+                uuid4().hex,
+            )
+        except TimerError as err:
+            raise ServiceValidationError(str(err)) from err
+        return result if call.return_response else None
+
+    schemas = {
+        "schedule_action": probatio.Schema(
+            {
+                probatio.Required("entity_id"): str,
+                probatio.Required("action"): probatio.In(["turn_on", "turn_off"]),
+                probatio.Required("delay_seconds"): probatio.All(
+                    int, probatio.Range(min=1, max=MAX_DURATION)
+                ),
+            }
+        ),
+        "list_actions": probatio.Schema({}),
+        "cancel_action": probatio.Schema({probatio.Required("job_id"): str}),
+    }
+    for name, schema in schemas.items():
+        hass.services.async_register(
+            DOMAIN, name, handle, schema=schema, supports_response=SupportsResponse.OPTIONAL
         )

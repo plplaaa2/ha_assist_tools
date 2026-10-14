@@ -1,4 +1,4 @@
-"""Coordinate satellite endpoints and deduplication; related files: setup/LLM.
+"""Coordinate satellite endpoints and shared device jobs; related files: setup/LLM.
 
 Each endpoint owns its player, persisted state, and pending announcements. Tool
 results are cached by call ID so retried calls cannot repeat state changes.
@@ -98,6 +98,9 @@ class Runtime:
     def __init__(self) -> None:
         self.endpoints: dict[str, Endpoint] = {}
         self.unregister_api = None
+        self.actions = None
+        self.control = None
+        self.actions_lock = asyncio.Lock()
 
     def for_device(self, device_id: str | None) -> Endpoint:
         """Use a trusted origin ID, never a model-supplied entity name."""

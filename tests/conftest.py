@@ -104,9 +104,13 @@ class SupportsResponse:
 def ha_contract():
     """Provide minimal verified HA boundaries for adapter/provider unit tests."""
     module("homeassistant")
+    module("homeassistant.auth")
+    module("homeassistant.auth.permissions")
+    module("homeassistant.auth.permissions.const", POLICY_CONTROL="control")
     module(
         "homeassistant.core",
         HomeAssistant=object,
+        Context=lambda **kwargs: SimpleNamespace(**kwargs),
         ServiceCall=object,
         SupportsResponse=SupportsResponse,
         callback=lambda f: f,
@@ -154,6 +158,11 @@ def ha_contract():
         async_register_api=register_api,
     )
     module("homeassistant.components")
+    module("homeassistant.components.homeassistant")
+    module(
+        "homeassistant.components.homeassistant.exposed_entities",
+        async_should_expose=lambda hass, assistant, entity_id: entity_id in hass.exposed,
+    )
     module(
         "homeassistant.components.assist_satellite", AssistSatelliteEntityFeature=SatelliteFeature
     )
@@ -175,7 +184,10 @@ def load_module():
 def hass(ha_contract):
     states = {
         "assist_satellite.kitchen": SimpleNamespace(
-            state="idle", name="Kitchen", attributes={"supported_features": 1}
+            entity_id="assist_satellite.kitchen",
+            state="idle",
+            name="Kitchen",
+            attributes={"supported_features": 1},
         ),
         "media_player.kitchen": SimpleNamespace(
             entity_id="media_player.kitchen",
@@ -191,15 +203,28 @@ def hass(ha_contract):
         data={},
         states=SimpleNamespace(
             get=states.get,
-            async_all=lambda domain: [
-                state for key, state in states.items() if key.startswith(domain + ".")
+            async_all=lambda domain=None: [
+                state
+                for key, state in states.items()
+                if domain is None or key.startswith(domain + ".")
             ],
         ),
         state_values=states,
         registry=SimpleNamespace(async_get=entries.get),
         registry_values=entries,
         services=SimpleNamespace(
-            async_call=AsyncMock(), async_register=lambda *args, **kwargs: None
+            async_call=AsyncMock(),
+            async_register=lambda *args, **kwargs: None,
+            has_service=lambda domain, action: True,
+        ),
+        exposed=set(),
+        auth=SimpleNamespace(
+            async_get_user=AsyncMock(
+                return_value=SimpleNamespace(
+                    is_active=True,
+                    permissions=SimpleNamespace(check_entity=lambda entity, policy: True),
+                )
+            )
         ),
         storage={},
         http=SimpleNamespace(async_register_static_paths=AsyncMock()),

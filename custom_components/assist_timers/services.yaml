@@ -81,3 +81,43 @@ status:
     timer_id:
       selector:
         text:
+schedule_action:
+  name: Schedule device on or off
+  description: Reserve an exposed device action after a delay; does not execute immediately.
+  fields:
+    entity_id:
+      name: Device entity
+      required: true
+      selector:
+        entity:
+          domain: [light, switch, fan, climate, media_player, humidifier, water_heater]
+    action:
+      name: Action
+      required: true
+      selector:
+        select:
+          options:
+            - label: Turn on
+              value: turn_on
+            - label: Turn off
+              value: turn_off
+    delay_seconds:
+      name: Delay in seconds
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 604800
+          mode: box
+list_actions:
+  name: List scheduled device actions
+  description: Return accessible pending jobs and recent outcomes with job IDs.
+cancel_action:
+  name: Cancel scheduled device action
+  description: Cancel an exact pending job; a running or completed action cannot be undone.
+  fields:
+    job_id:
+      name: Job ID
+      required: true
+      selector:
+        text:
