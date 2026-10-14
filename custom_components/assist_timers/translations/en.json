@@ -4,8 +4,13 @@
     "step": {
       "user": {
         "title": "Connect an Assist satellite",
-        "description": "Choose the originating satellite and its normal alarm media player. Enable the Assist Timers tool provider in your existing LLM conversation agent. Each satellite and media player may only be configured once.",
-        "data": {"satellite": "Assist satellite", "media_player": "Alarm media player"}
+        "description": "Choose the originating satellite. A unique available media player with the same display name is selected automatically. Otherwise you can select a player in the next step. Enable Assist Timers in your existing LLM conversation agent.",
+        "data": {"satellite": "Assist satellite"}
+      },
+      "player": {
+        "title": "Select an alarm media player",
+        "description": "No unique usable player with the satellite's display name was found. Select the player that should sound this satellite's alarm.",
+        "data": {"media_player": "Alarm media player"}
       },
       "reconfigure": {
         "title": "Update satellite settings",

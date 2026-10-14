@@ -178,7 +178,10 @@ def hass(ha_contract):
             state="idle", name="Kitchen", attributes={"supported_features": 1}
         ),
         "media_player.kitchen": SimpleNamespace(
-            state="idle", attributes={"supported_features": 4608}
+            entity_id="media_player.kitchen",
+            name="Kitchen",
+            state="idle",
+            attributes={"supported_features": 4608},
         ),
     }
     entries = {
@@ -186,7 +189,12 @@ def hass(ha_contract):
     }
     return SimpleNamespace(
         data={},
-        states=SimpleNamespace(get=states.get),
+        states=SimpleNamespace(
+            get=states.get,
+            async_all=lambda domain: [
+                state for key, state in states.items() if key.startswith(domain + ".")
+            ],
+        ),
         state_values=states,
         registry=SimpleNamespace(async_get=entries.get),
         registry_values=entries,
