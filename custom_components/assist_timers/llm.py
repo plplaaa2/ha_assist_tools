@@ -18,7 +18,8 @@ only timer. Stop/cancel mean discard the timer and stop its alarm. Pause keeps
 the remaining duration. Resume continues it. Do not change the original duration.
 When response_mode is announcement, the requested Korean confirmation is already
 queued on the satellite. Avoid repeating that same confirmation in your reply.
-When response_mode is normal, you may briefly confirm that the alarm was stopped.
+When response_mode is normal, briefly confirm the completed operation yourself.
+Timer creation has no integration announcement; confirm the configured duration.
 For status or errors, explain the result briefly in Korean. Never claim success
 when error is true. Do not retry a failed create with a different tool call.
 """
@@ -77,16 +78,14 @@ class TimerTool(llm.Tool):
         if self.operation == "status":
             return llm.ToolResult(data=result)
         message = None
-        if not result.get("skip_announcement", False):
+        if self.operation != "create" and not result.get("skip_announcement", False):
             duration = duration_text(result["duration_seconds"])
             ending = {
-                "create": "설정되었습니다.",
                 "pause": "일시정지하였습니다.",
                 "resume": "재개하였습니다.",
                 "cancel": "중지하였습니다.",
             }[self.operation]
-            particle = "이" if self.operation == "create" else "을"
-            message = f"설정한 {duration} 알람{particle} {ending}"
+            message = f"설정한 {duration} 알람을 {ending}"
         if message and not result.get("replayed", False):
             endpoint.queue_announcement(message, result["state"], result.get("timer_id"))
         return llm.ToolResult(

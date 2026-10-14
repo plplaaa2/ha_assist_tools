@@ -20,7 +20,10 @@ async def endpoints(load_module, hass):
     runtime = runtime_module.Runtime()
     for device in ("kitchen", "bedroom"):
         output = SimpleNamespace(
-            async_play=AsyncMock(), async_stop=AsyncMock(), async_announce=AsyncMock()
+            satellite=f"assist_satellite.{device}",
+            async_play=AsyncMock(),
+            async_stop=AsyncMock(),
+            async_announce=AsyncMock(),
         )
         manager = core.TimerManager(output, AsyncMock())
         endpoint = runtime_module.Endpoint(device, manager, output)
@@ -102,7 +105,9 @@ async def test_confirmations_and_ringing_cancel_response(endpoints, load_module,
 
     created = await invoke("create", {"duration_seconds": 300})
     assert not created.error
-    assert messages == ["설정한 5분 알람이 설정되었습니다."]
+    assert messages == []
+    assert created.data["response_mode"] == "normal"
+    assert created.data["announcement_queued"] is False
     await invoke("pause")
     assert messages[-1] == "설정한 5분 알람을 일시정지하였습니다."
     await invoke("cancel")
@@ -127,6 +132,26 @@ async def test_tool_failure_reports_error_without_announcement(
         hass, ha_contract.ToolInput(tool.name, {}), ha_contract.LLMContext("kitchen")
     )
     assert result.error and result.data["error"] == "timer_not_found"
+    endpoint.queue_announcement.assert_not_called()
+
+
+async def test_service_create_does_not_announce(endpoints, load_module, hass):
+    handlers = {}
+    hass.services.async_register = lambda domain, name, handler, **kwargs: handlers.update(
+        {name: handler}
+    )
+    endpoint = endpoints.for_device("kitchen")
+    endpoint.output.satellite = "assist_satellite.kitchen"
+    endpoint.queue_announcement = AsyncMock()
+    load_module("__init__").register_services(hass, endpoints)
+    result = await handlers["create"](
+        SimpleNamespace(
+            service="create",
+            data={"satellite": "assist_satellite.kitchen", "duration_seconds": 300},
+            return_response=True,
+        )
+    )
+    assert result["state"] == "active"
     endpoint.queue_announcement.assert_not_called()
 
 

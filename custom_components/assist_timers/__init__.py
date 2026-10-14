@@ -135,10 +135,9 @@ def register_services(hass: HomeAssistant, runtime: Runtime) -> None:
             result = await endpoint.async_operation(operation, args, uuid4().hex)
         except TimerError as err:
             raise ServiceValidationError(str(err)) from err
-        if operation != "status" and not result.get("skip_announcement", False):
+        if operation not in ("create", "status") and not result.get("skip_announcement", False):
             duration = duration_text(result["duration_seconds"])
             endings = {
-                "create": "이 설정되었습니다.",
                 "pause": "을 일시정지하였습니다.",
                 "resume": "을 재개하였습니다.",
                 "cancel": "을 중지하였습니다.",

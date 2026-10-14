@@ -1,7 +1,7 @@
 # Describe lifecycle actions; related files: __init__.py and timer_manager.py.
 create:
   name: Create satellite timer
-  description: Create the only timer on a configured satellite; announce confirmation.
+  description: Create the only timer on a configured satellite without an announcement.
   fields:
     satellite:
       name: Satellite
