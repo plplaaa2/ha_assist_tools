@@ -11,8 +11,9 @@ from imageio_ffmpeg import get_ffmpeg_exe
 
 
 def main() -> None:
+    # Resolve the renamed integration path; related files: const.py and README.md.
     root = Path(__file__).resolve().parents[1]
-    sounds = root / "custom_components" / "assist_timers" / "alarm_sounds"
+    sounds = root / "custom_components" / "assist_tools" / "alarm_sounds"
     subprocess.run(
         [
             get_ffmpeg_exe(),

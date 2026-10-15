@@ -4,7 +4,7 @@ Assist 타이머, 기기 예약 제어와 냉난방 모드 제어를 제공하�
 몇 분 후 기기를 켜거나 끄는 예약 제어도 함께 제공합니다.
 
 - 버전: `0.1.0`
-- 도메인: `assist_timers` (기존 설정 호환성을 위해 유지)
+- 도메인: `assist_tools` (통합 폴더명과 일치)
 - Tool providers: **Assist Timer**(타이머), **Assist Scheduled Control**(기기 켜기·끄기 예약), **Assist Climate**(냉난방·팬 모드), **Assist Fan**(선풍기·공기청정기 프리셋·회전·방향), **Assist History**(기기 상태 이력); 각각 선택하여 활성화
 - 지원 기준: Home Assistant `2026.10.1` 이상
 - 상태: 로컬 구현 및 단위 테스트 완료, 실제 HA·위성 검증 대기
@@ -38,7 +38,16 @@ LLM에는 이미 예약된 확인 문구를 반복하지 않도록 안내하지�
 
 ## 로컬 설치 및 설정
 
-1. `custom_components/assist_timers/` 전체를 HA 설정 폴더의 같은 경로로 복사하고 재시작합니다.
+통합 폴더와 도메인은 `assist_tools`입니다. 이전 `assist_timers` 설치에서 전환한다면
+먼저 HA 백업을 만들고 기존 타이머·기기 제어 예약을 취소한 뒤 기존 통합을 제거하세요.
+HA의 이전 `custom_components/assist_timers` 폴더를 정리하고 새 경로로 설치한 후,
+Assist Tools 통합을 다시 추가하여 위성·플레이어를 재연결합니다.
+기존 통합 설정·진행 중 타이머·예약 저장 데이터는 자동 이전하지 않습니다.
+자동화·스크립트의 `assist_timers.*` 서비스 호출도 `assist_tools.*`로 바꾸세요.
+Timer provider ID `assist_timers`와 다른 provider ID, LLM 도구 이름은 그대로 유지합니다.
+GitHub 저장소 경로는 별도 정보가 없으므로 기존 placeholder URL을 유지합니다.
+
+1. `custom_components/assist_tools/` 전체를 HA 설정 폴더의 같은 경로로 복사하고 재시작합니다.
    로컬 설치 ZIP은 HA 설정 폴더에 풀면 위 경로가 만들어집니다. 기존 타이머 통합을 사용 중이라면 덮어쓰기 전에 백업하세요.
 2. **설정 → 기기 및 서비스 → 통합 추가 → Assist Tools**에서 위성을 선택합니다. 표시 이름이 같은 사용 가능한 미디어 플레이어가 하나이면 자동으로 연결합니다. 없거나 여러 개이면 플레이어 선택 화면이 나옵니다. 다른 위성 타이머가 사용 중인 플레이어는 자동 선택하지 않습니다. 연결 후에는 재구성에서 변경할 수 있습니다.
 3. 위성은 `ANNOUNCE`, 플레이어는 `PLAY_MEDIA`와 `STOP` 기능을 지원해야 합니다. 위성별로 한 번씩 설정하며 플레이어도 다른 항목과 중복 연결할 수 없습니다.
@@ -50,7 +59,7 @@ LLM에는 이미 예약된 확인 문구를 반복하지 않도록 안내하지�
 일반 미디어 재생은 해당 플레이어의 현재 미디어를 대체할 수 있습니다.
 원본 MP3는 보존하고, 이를 반복한 `alarm_60s.mp3`를 재생합니다.
 재생 파일 자체가 60초로 제한되며 자동 정지 예약도 설정합니다.
-공개 정적 URL `/assist_timers/sounds/alarm_60s.mp3`에는 이 알람 파일 하나만 제공합니다.
+공개 정적 URL `/assist_tools/sounds/alarm_60s.mp3`에는 이 알람 파일 하나만 제공합니다.
 HACS 공개 등록은 아직 하지 않았습니다. 로컬 ZIP은 수동 설치용이며 HACS 릴리스 ZIP 설정은 사용하지 않습니다.
 
 ## 기기 상태 이력 조회
@@ -165,17 +174,17 @@ LLM 도구는 `AssistScheduledControlCreate`, `AssistScheduledControlList`, `Ass
 개발자 도구에서는 다음 작업으로 시험할 수 있습니다. 대상은 Assist에 노출되어 있어야 합니다.
 
 ```yaml
-action: assist_timers.schedule_action
+action: assist_tools.schedule_action
 data:
   entity_id: light.living_room
   action: turn_on
   delay_seconds: 300
 ```
 
-`assist_timers.list_actions`의 작업 응답에서 `job_id`를 확인하고 취소할 수 있습니다.
+`assist_tools.list_actions`의 작업 응답에서 `job_id`를 확인하고 취소할 수 있습니다.
 
 ```yaml
-action: assist_timers.cancel_action
+action: assist_tools.cancel_action
 data:
   job_id: 조회한_예약_ID
 ```
@@ -202,21 +211,21 @@ data:
 먼저 개발자 도구의 작업에서 짧은 타이머로 테스트합니다.
 
 ```yaml
-action: assist_timers.create
+action: assist_tools.create
 data:
   satellite: assist_satellite.kitchen
   duration_seconds: 10
   name: 테스트
 ```
 
-조회는 `assist_timers.status`, 일시정지는 `assist_timers.pause`, 재개는 `assist_timers.resume`,
-취소는 `assist_timers.cancel` 또는 `assist_timers.stop`을 사용합니다.
+조회는 `assist_tools.status`, 일시정지는 `assist_tools.pause`, 재개는 `assist_tools.resume`,
+취소는 `assist_tools.cancel` 또는 `assist_tools.stop`을 사용합니다.
 각 작업의 `satellite`에는 설정한 위성 엔티티 ID를 넣습니다.
 작업 응답을 요청하면 ID, 상태, 처음 설정한 시간과 남은 시간을 확인할 수 있습니다.
 `timer_id`를 넣으면 현재 타이머와 일치하는지 검사하며, 생략하면 해당 위성의 단일 타이머를 제어합니다.
 
 ```yaml
-action: assist_timers.cancel
+action: assist_tools.cancel
 data:
   satellite: assist_satellite.kitchen
 ```

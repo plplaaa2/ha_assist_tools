@@ -22,7 +22,7 @@ assist_timers/
 |-- tools/
 |   `-- prepare_alarm.py            # Build the bounded alarm from the source MP3
 `-- custom_components/
-    `-- assist_timers/
+    `-- assist_tools/
         |-- __init__.py             # Setup, shutdown, storage, and HA lifecycle actions
         |-- config_flow.py          # Unique satellite and media-player bindings
         |-- const.py                # Shared domain, duration limits, and media URL
@@ -50,8 +50,9 @@ assist_timers/
 Only one integration is included in custom_components. No separate conversation
 agent is installed; the existing LLM agent independently selects the Assist Timer
 and Assist Scheduled Control, Assist Climate, Assist Fan and Assist History APIs.
-The project display name is Assist Tools; the existing
-assist_timers directory and domain remain stable for compatibility.
+The project display name is Assist Tools. The integration directory and domain
+are assist_tools; the repository root is still
+assist_timers. The timer provider ID remains assist_timers for agent compatibility.
 The .git directory, .venv, test/lint caches, backup archives, and dist artifacts
 are excluded from this source tree. Tests use HA boundary doubles; real HA and
 satellite testing remain a separate installation step.

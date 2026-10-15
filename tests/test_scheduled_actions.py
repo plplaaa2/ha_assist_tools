@@ -211,7 +211,7 @@ async def test_scheduler_independent_from_alarm_timer(
 ):
     runtime = load_module("runtime").Runtime()
     runtime.actions, runtime.control = scheduler.manager, device
-    hass.data["assist_timers"] = runtime
+    hass.data["assist_tools"] = runtime
     tool = load_module("action_tools").ActionTool("schedule_action", ["light.room"])
     result = await tool.async_call(
         hass,
@@ -298,7 +298,7 @@ async def test_last_entry_unload_preserves_future_device_job(load_module, hass, 
     await setup.async_setup(hass, {})
     try:
         await setup.async_setup_entry(hass, entry)
-        runtime = hass.data["assist_timers"]
+        runtime = hass.data["assist_tools"]
         created = await runtime.actions.async_create("light.room", "turn_on", 300)
         await setup.async_unload_entry(hass, entry)
         assert runtime.actions is None
@@ -306,9 +306,9 @@ async def test_last_entry_unload_preserves_future_device_job(load_module, hass, 
         assert runtime.actions.jobs[created["job_id"]].state == "pending"
         await setup.async_unload_entry(hass, entry)
         await setup.async_remove_entry(hass, entry)
-        assert "assist_timers.scheduled_actions" not in hass.storage
+        assert "assist_tools.scheduled_actions" not in hass.storage
     finally:
-        hass.data["assist_timers"].unregister_api()
+        hass.data["assist_tools"].unregister_api()
 
 
 async def test_revoked_user_permission_blocks_due_action(device, scheduler, hass):
@@ -336,7 +336,7 @@ async def test_recent_cancel_is_retained_in_bounded_history(scheduler):
 
 def test_action_service_descriptions_are_valid_yaml():
     descriptions = yaml.safe_load(
-        (ROOT / "custom_components/assist_timers/services.yaml").read_text(encoding="utf-8")
+        (ROOT / "custom_components/assist_tools/services.yaml").read_text(encoding="utf-8")
     )
     assert set(descriptions["schedule_action"]["fields"]) == {
         "entity_id",

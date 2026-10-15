@@ -1,5 +1,5 @@
 {
-  "domain": "assist_timers",
+  "domain": "assist_tools",
   "name": "Assist Tools",
   "codeowners": [],
   "config_flow": true,

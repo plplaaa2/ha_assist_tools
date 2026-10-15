@@ -29,7 +29,7 @@ async def endpoints(load_module, hass):
         endpoint = runtime_module.Endpoint(device, manager, output)
         endpoint.queue_announcement = lambda *args: None
         runtime.endpoints[device] = endpoint
-    hass.data["assist_timers"] = runtime
+    hass.data["assist_tools"] = runtime
     yield runtime
     for endpoint in runtime.endpoints.values():
         await endpoint.async_close()
@@ -84,7 +84,7 @@ async def test_api_exposes_text_targets_but_keeps_voice_origin_fixed(
     api = load_module("llm").AssistTimersAPI(hass=hass, id="assist_timers", name="Assist Timers")
     instance = await api.async_get_api_instance(ha_contract.LLMContext("kitchen"))
     assert len(instance.tools) == 5
-    assert all(tool.integration == "assist_timers" for tool in instance.tools)
+    assert all(tool.integration == "assist_tools" for tool in instance.tools)
     assert "satellite" not in instance.tools[0].parameters.schema
     unknown = await api.async_get_api_instance(ha_contract.LLMContext("phone"))
     assert len(unknown.tools) == 5
@@ -244,7 +244,7 @@ async def test_normal_media_alarm_and_real_stop(load_module, hass):
     assert play_call.args[:2] == ("media_player", "play_media")
     data = play_call.args[2]
     assert data["entity_id"] == "media_player.kitchen"
-    assert data["media_content_id"] == "http://ha.test:8123/assist_timers/sounds/alarm_60s.mp3"
+    assert data["media_content_id"] == "http://ha.test:8123/assist_tools/sounds/alarm_60s.mp3"
     assert "announce" not in data
     await output.async_stop()
     assert hass.services.async_call.await_args.args == (
@@ -314,7 +314,7 @@ async def test_stale_queued_confirmation_does_not_describe_new_timer(load_module
 
 
 def test_bounded_alarm_duration():
-    path = ROOT / "custom_components/assist_timers/alarm_sounds/alarm_60s.mp3"
+    path = ROOT / "custom_components/assist_tools/alarm_sounds/alarm_60s.mp3"
     assert 60 <= MP3(path).info.length < 60.1
 
 
@@ -326,8 +326,9 @@ def test_platform_discovery_does_not_duplicate_standalone_tools(load_module, has
 
 
 def test_metadata_and_translations_match():
-    base = ROOT / "custom_components/assist_timers"
+    base = ROOT / "custom_components/assist_tools"
     manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["domain"] == base.name == "assist_tools"
     assert manifest["version"] == "0.1.0" and manifest["config_flow"] is True
     english = json.loads((base / "strings.json").read_text(encoding="utf-8"))
     korean = json.loads((base / "translations/ko.json").read_text(encoding="utf-8"))
@@ -350,18 +351,18 @@ async def test_setup_unload_and_storage_lifecycle(load_module, hass, ha_contract
     assert ha_contract.apis["assist_fan"].name == "Assist Fan"
     assert ha_contract.apis["assist_history"].name == "Assist History"
     assert await setup.async_setup_entry(hass, entry)
-    endpoint = hass.data["assist_timers"].endpoints[entry.entry_id]
+    endpoint = hass.data["assist_tools"].endpoints[entry.entry_id]
     first = await endpoint.manager.async_create(300)
     assert await setup.async_unload_entry(hass, entry)
-    assert hass.storage["assist_timers.test-entry"]["timer_id"] == first["timer_id"]
+    assert hass.storage["assist_tools.test-entry"]["timer_id"] == first["timer_id"]
     assert await setup.async_setup_entry(hass, entry)
     assert (
-        hass.data["assist_timers"].endpoints[entry.entry_id].manager.snapshot()["state"] == "active"
+        hass.data["assist_tools"].endpoints[entry.entry_id].manager.snapshot()["state"] == "active"
     )
     assert await setup.async_unload_entry(hass, entry)
     await setup.async_remove_entry(hass, entry)
-    assert "assist_timers.test-entry" not in hass.storage
-    hass.data["assist_timers"].unregister_api()
+    assert "assist_tools.test-entry" not in hass.storage
+    hass.data["assist_tools"].unregister_api()
     assert not ha_contract.apis
 
 

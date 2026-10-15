@@ -15,9 +15,9 @@ from unittest.mock import AsyncMock
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGE = "assist_timers_unit"
+PACKAGE = "assist_tools_unit"
 package = ModuleType(PACKAGE)
-package.__path__ = [str(ROOT / "custom_components" / "assist_timers")]
+package.__path__ = [str(ROOT / "custom_components" / "assist_tools")]
 sys.modules[PACKAGE] = package
 
 
