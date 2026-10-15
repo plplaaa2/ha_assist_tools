@@ -121,7 +121,7 @@ def ha_contract():
     module("homeassistant")
     module("homeassistant.auth")
     module("homeassistant.auth.permissions")
-    module("homeassistant.auth.permissions.const", POLICY_CONTROL="control")
+    module("homeassistant.auth.permissions.const", POLICY_CONTROL="control", POLICY_READ="read")
     module(
         "homeassistant.core",
         HomeAssistant=object,
@@ -184,6 +184,12 @@ def ha_contract():
     module("homeassistant.components.media_player", MediaPlayerEntityFeature=PlayerFeature)
     module("homeassistant.components.climate", ClimateEntityFeature=ClimateFeature)
     module("homeassistant.components.fan", FanEntityFeature=FanFeature)
+    module("homeassistant.components.recorder")
+    module(
+        "homeassistant.components.recorder.history",
+        get_significant_states=lambda *args, **kwargs: {},
+    )
+    module("homeassistant.helpers.recorder", get_instance=lambda hass: hass.data["test_recorder"])
     module("homeassistant.components.http", StaticPathConfig=lambda *args: args)
     return SimpleNamespace(
         apis=apis,
@@ -218,6 +224,7 @@ def hass(ha_contract):
     }
     return SimpleNamespace(
         data={},
+        config=SimpleNamespace(time_zone="Asia/Seoul"),
         states=SimpleNamespace(
             get=states.get,
             async_all=lambda domain=None: [

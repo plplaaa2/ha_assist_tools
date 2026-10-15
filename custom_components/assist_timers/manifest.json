@@ -4,6 +4,7 @@
   "codeowners": [],
   "config_flow": true,
   "dependencies": ["assist_satellite", "http", "llm", "media_player"],
+  "after_dependencies": ["recorder"],
   "documentation": "https://github.com/YOUR_GITHUB_USERNAME/assist_timers",
   "issue_tracker": "https://github.com/YOUR_GITHUB_USERNAME/assist_timers/issues",
   "integration_type": "service",

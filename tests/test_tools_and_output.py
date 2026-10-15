@@ -348,6 +348,7 @@ async def test_setup_unload_and_storage_lifecycle(load_module, hass, ha_contract
     assert ha_contract.apis["assist_devices"].name == "Assist Scheduled Control"
     assert ha_contract.apis["assist_climate"].name == "Assist Climate"
     assert ha_contract.apis["assist_fan"].name == "Assist Fan"
+    assert ha_contract.apis["assist_history"].name == "Assist History"
     assert await setup.async_setup_entry(hass, entry)
     endpoint = hass.data["assist_timers"].endpoints[entry.entry_id]
     first = await endpoint.manager.async_create(300)

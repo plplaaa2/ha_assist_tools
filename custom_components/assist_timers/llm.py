@@ -14,6 +14,7 @@ from .action_tools import ACTION_PROMPT, ActionTool
 from .climate_tools import AssistClimateAPI
 from .const import API_ID, DOMAIN, MAX_DURATION
 from .fan_tools import AssistFanAPI
+from .history_tools import AssistHistoryAPI
 from .timer_manager import TimerError, duration_text
 
 PROMPT = """Use only the AssistTimers tools for timers and alarms on this satellite.
@@ -209,8 +210,21 @@ def register_api(hass: HomeAssistant):
         unregister_timer()
         raise
 
+    # Roll back earlier providers on history registration failure; related: history_tools.
+    try:
+        unregister_history = llm.async_register_api(
+            hass, AssistHistoryAPI(hass=hass, id="assist_history", name="Assist History")
+        )
+    except Exception:
+        unregister_fan()
+        unregister_climate()
+        unregister_devices()
+        unregister_timer()
+        raise
+
     @callback
     def unregister():
+        unregister_history()
         unregister_fan()
         unregister_climate()
         unregister_devices()
