@@ -83,6 +83,15 @@ class ClimateFeature(IntFlag):
     FAN_MODE = 8
 
 
+class FanFeature(IntFlag):
+    """Fan contract constants; related files: fan_tools and test_fan_tools."""
+
+    SET_SPEED = 1
+    OSCILLATE = 2
+    DIRECTION = 4
+    PRESET_MODE = 8
+
+
 class ConfigFlow:
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__()
@@ -174,6 +183,7 @@ def ha_contract():
     )
     module("homeassistant.components.media_player", MediaPlayerEntityFeature=PlayerFeature)
     module("homeassistant.components.climate", ClimateEntityFeature=ClimateFeature)
+    module("homeassistant.components.fan", FanEntityFeature=FanFeature)
     module("homeassistant.components.http", StaticPathConfig=lambda *args: args)
     return SimpleNamespace(
         apis=apis,

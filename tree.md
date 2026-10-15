@@ -16,6 +16,7 @@ assist_timers/
 |   |-- test_timer_manager.py       # Lifecycle, real scheduling, restoration, races
 |   |-- test_scheduled_actions.py   # Delayed device jobs, permissions, restoration
 |   |-- test_climate_tools.py       # Device-specific HVAC/fan modes and authorization
+|   |-- test_fan_tools.py           # Fan presets, oscillation, direction and permissions
 |   `-- test_tools_and_output.py    # Routing, API, media, setup, and configuration
 |-- tools/
 |   `-- prepare_alarm.py            # Build the bounded alarm from the source MP3
@@ -27,6 +28,7 @@ assist_timers/
         |-- llm.py                  # Selectable API, alarm tools, and device job tools
         |-- action_tools.py         # LLM and HA action validation for scheduled jobs
         |-- climate_tools.py        # Independent climate provider, capabilities and calls
+        |-- fan_tools.py            # Independent fan settings provider and validation
         |-- device_control.py       # Assist exposure, permissions, power capabilities
         |-- manifest.json           # HA metadata, config flow, version 0.1.0
         |-- runtime.py              # Device routing, deduplication, confirmations
@@ -45,7 +47,7 @@ assist_timers/
 
 Only one integration is included in custom_components. No separate conversation
 agent is installed; the existing LLM agent independently selects the Assist Timer
-and Assist Scheduled Control and Assist Climate APIs. The project display name is Assist Tools; the existing
+and Assist Scheduled Control, Assist Climate and Assist Fan APIs. The project display name is Assist Tools; the existing
 assist_timers directory and domain remain stable for compatibility.
 The .git directory, .venv, test/lint caches, backup archives, and dist artifacts
 are excluded from this source tree. Tests use HA boundary doubles; real HA and

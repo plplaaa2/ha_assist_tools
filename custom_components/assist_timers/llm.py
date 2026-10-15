@@ -13,6 +13,7 @@ from homeassistant.helpers import llm
 from .action_tools import ACTION_PROMPT, ActionTool
 from .climate_tools import AssistClimateAPI
 from .const import API_ID, DOMAIN, MAX_DURATION
+from .fan_tools import AssistFanAPI
 from .timer_manager import TimerError, duration_text
 
 PROMPT = """Use only the AssistTimers tools for timers and alarms on this satellite.
@@ -197,8 +198,20 @@ def register_api(hass: HomeAssistant):
         unregister_timer()
         raise
 
+    # Roll back every registered provider if fan setup fails; related: fan_tools.
+    try:
+        unregister_fan = llm.async_register_api(
+            hass, AssistFanAPI(hass=hass, id="assist_fan", name="Assist Fan")
+        )
+    except Exception:
+        unregister_climate()
+        unregister_devices()
+        unregister_timer()
+        raise
+
     @callback
     def unregister():
+        unregister_fan()
         unregister_climate()
         unregister_devices()
         unregister_timer()
