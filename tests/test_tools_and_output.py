@@ -117,14 +117,14 @@ async def test_providers_expose_only_their_own_tools(endpoints, load_module, has
         hass=hass, id="assist_timers", name="Assist Timer"
     ).async_get_api_instance(context)
     devices = await module.AssistDevicesAPI(
-        hass=hass, id="assist_devices", name="Assist Devices"
+        hass=hass, id="assist_devices", name="Assist Scheduled Control"
     ).async_get_api_instance(context)
     assert len(timer.tools) == 5
     assert all(tool.name.startswith("AssistTimers") for tool in timer.tools)
     assert {tool.name for tool in devices.tools} == {
-        "AssistDevicesSchedule",
-        "AssistDevicesList",
-        "AssistDevicesCancel",
+        "AssistScheduledControlCreate",
+        "AssistScheduledControlList",
+        "AssistScheduledControlCancel",
     }
     assert "Available device names" not in timer.api_prompt
     assert "Configured satellite names" not in devices.api_prompt
@@ -345,7 +345,7 @@ async def test_setup_unload_and_storage_lifecycle(load_module, hass, ha_contract
     assert await setup.async_setup(hass, {})
     assert "assist_timers" in ha_contract.apis
     assert ha_contract.apis["assist_timers"].name == "Assist Timer"
-    assert ha_contract.apis["assist_devices"].name == "Assist Devices"
+    assert ha_contract.apis["assist_devices"].name == "Assist Scheduled Control"
     assert await setup.async_setup_entry(hass, entry)
     endpoint = hass.data["assist_timers"].endpoints[entry.entry_id]
     first = await endpoint.manager.async_create(300)

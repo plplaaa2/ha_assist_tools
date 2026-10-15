@@ -5,7 +5,7 @@ Assist 타이머와 기기 예약 제어를 제공하는 Home Assistant용 HACS 
 
 - 버전: `0.1.0`
 - 도메인: `assist_timers` (기존 설정 호환성을 위해 유지)
-- Tool providers: **Assist Timer**(타이머), **Assist Devices**(기기 켜기·끄기 예약); 각각 선택하여 활성화
+- Tool providers: **Assist Timer**(타이머), **Assist Scheduled Control**(기기 켜기·끄기 예약); 각각 선택하여 활성화
 - 지원 기준: Home Assistant `2026.10.1` 이상
 - 상태: 로컬 구현 및 단위 테스트 완료, 실제 HA·위성 검증 대기
 
@@ -55,7 +55,7 @@ HACS 공개 등록은 아직 하지 않았습니다. 로컬 ZIP은 수동 설치
 
 ## 몇 분 후 기기 켜기·끄기
 
-**Assist Devices** Tool provider를 별도로 활성화하면 예약 기기 제어를 사용할 수 있습니다.
+**Assist Scheduled Control** Tool provider를 별도로 활성화하면 예약 기기 제어를 사용할 수 있습니다.
 
 - “5분 후 거실 조명 켜 줘.”
 - “10분 후 선풍기 꺼 줘.”
@@ -63,7 +63,7 @@ HACS 공개 등록은 아직 하지 않았습니다. 로컬 ZIP은 수동 설치
 - “기기 제어 예약 목록 보여 줘.”
 - “방금 예약한 선풍기 끄기를 취소해 줘.”
 
-LLM 도구는 `AssistDevicesSchedule`, `AssistDevicesList`, `AssistDevicesCancel`입니다.
+LLM 도구는 `AssistScheduledControlCreate`, `AssistScheduledControlList`, `AssistScheduledControlCancel`입니다.
 예약 시 대상 엔티티와 `turn_on` / `turn_off`를 확정하여 저장합니다.
 시간이 되면 HA가 직접 실행하며, LLM에 명령을 다시 해석시키지 않습니다.
 기기 이름이 모호하면 어느 기기인지 질문하도록 안내합니다.

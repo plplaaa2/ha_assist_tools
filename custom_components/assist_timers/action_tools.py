@@ -1,4 +1,4 @@
-"""Expose delayed device controls to LLMs; related files: scheduler/control/setup.
+"""Name and describe scheduled control tools; related files: llm, scheduler/control/setup.
 
 Creation resolves one entity and action now. Cancellation uses an exact job ID,
 and all replies belong to the LLM rather than the satellite announcement channel.
@@ -10,13 +10,13 @@ from homeassistant.helpers import llm
 from .const import DOMAIN, MAX_DURATION
 from .timer_manager import TimerError
 
-ACTION_PROMPT = """For delayed device commands use AssistDevicesSchedule, not an alarm
+ACTION_PROMPT = """For delayed device commands use AssistScheduledControlCreate, not an alarm
 timer and not an immediate device-control tool. Resolve the exact entity_id from
 the available device data. Ask the user if a name has multiple possible matches.
 Pass delay_seconds and turn_on or turn_off. You may create two separate jobs for
 'turn on in five minutes and off in ten minutes'. Do not execute anything now.
-Use AssistDevicesList to find job IDs before cancelling a scheduled action with
-AssistDevicesCancel. Cancelling an alarm timer does not cancel device jobs.
+Use AssistScheduledControlList to find job IDs before cancelling a scheduled action with
+AssistScheduledControlCancel. Cancelling an alarm timer does not cancel device jobs.
 Confirm scheduling/cancellation yourself in Korean. An accepted reservation is
 not a claim that the device has already changed state. Completed/failed/expired
 jobs are outcomes; never automatically repeat a failed or uncertain execution.
@@ -53,28 +53,38 @@ class ActionTool(llm.Tool):
 
     def __init__(self, operation: str, entities: list[str] | None = None) -> None:
         self.operation = operation
-        suffix = {"schedule_action": "Schedule", "list_actions": "List", "cancel_action": "Cancel"}[
+        suffix = {"schedule_action": "Create", "list_actions": "List", "cancel_action": "Cancel"}[
             operation
         ]
-        self.name = f"AssistDevices{suffix}"
-        self.title = f"Scheduled device action: {suffix}"
+        self.name = f"AssistScheduledControl{suffix}"
+        self.title = f"Scheduled device control: {suffix}"
         self.description = {
             "schedule_action": "Schedule turning one exposed device on or off after a delay; do not execute now.",
-            "list_actions": "List visible pending device reservations and their completed, cancelled or failed outcomes.",
-            "cancel_action": "Cancel a pending device reservation by job_id, not an alarm timer.",
+            "list_actions": "List scheduled device controls and their job IDs, including pending reservations and completed, cancelled or failed outcomes; not alarm timers.",
+            "cancel_action": "Cancel a pending scheduled device control by its exact job_id; do not cancel alarm timers or undo device actions that already started.",
         }[operation]
         fields = {}
         if operation == "schedule_action":
             fields = {
-                probatio.Required("entity_id"): probatio.In(entities or []),
-                probatio.Required("action"): probatio.In(["turn_on", "turn_off"]),
-                probatio.Required("delay_seconds"): probatio.All(
-                    int, probatio.Range(min=1, max=MAX_DURATION)
-                ),
+                probatio.Required(
+                    "entity_id",
+                    description="Exact exposed device entity ID to control when the delay ends.",
+                ): probatio.In(entities or []),
+                probatio.Required(
+                    "action",
+                    description="Device operation to execute after the delay: turn_on or turn_off.",
+                ): probatio.In(["turn_on", "turn_off"]),
+                probatio.Required(
+                    "delay_seconds",
+                    description="Delay from now in seconds, from 1 to 604800; never execute immediately.",
+                ): probatio.All(int, probatio.Range(min=1, max=MAX_DURATION)),
             }
         elif operation == "cancel_action":
             fields = {
-                probatio.Required("job_id"): probatio.All(str, probatio.Length(min=1, max=64))
+                probatio.Required(
+                    "job_id",
+                    description="Exact scheduled control job_id returned by Create or List; not an alarm timer ID.",
+                ): probatio.All(str, probatio.Length(min=1, max=64))
             }
         self.parameters = probatio.Schema(fields)
         self.annotations = llm.ToolAnnotations(

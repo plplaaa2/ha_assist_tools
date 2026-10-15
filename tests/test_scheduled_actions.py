@@ -223,12 +223,14 @@ async def test_scheduler_independent_from_alarm_timer(
     assert not result.error and result.data["state"] == "pending"
     assert result.data["response_mode"] == "normal"
     hass.services.async_call.assert_not_awaited()
-    api = load_module("llm").AssistDevicesAPI(hass=hass, id="assist_devices", name="Assist Devices")
+    api = load_module("llm").AssistDevicesAPI(
+        hass=hass, id="assist_devices", name="Assist Scheduled Control"
+    )
     instance = await api.async_get_api_instance(ha_contract.LLMContext(None))
     assert {t.name for t in instance.tools} == {
-        "AssistDevicesSchedule",
-        "AssistDevicesList",
-        "AssistDevicesCancel",
+        "AssistScheduledControlCreate",
+        "AssistScheduledControlList",
+        "AssistScheduledControlCancel",
     }
     timer_api = load_module("llm").AssistTimersAPI(
         hass=hass, id="assist_timers", name="Assist Timer"

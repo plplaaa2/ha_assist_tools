@@ -180,7 +180,7 @@ def register_api(hass: HomeAssistant):
     )
     try:
         unregister_devices = llm.async_register_api(
-            hass, AssistDevicesAPI(hass=hass, id="assist_devices", name="Assist Devices")
+            hass, AssistDevicesAPI(hass=hass, id="assist_devices", name="Assist Scheduled Control")
         )
     except Exception:
         unregister_timer()
