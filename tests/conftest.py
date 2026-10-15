@@ -77,6 +77,12 @@ class SatelliteFeature(IntFlag):
     ANNOUNCE = 1
 
 
+class ClimateFeature(IntFlag):
+    """Climate feature contract; related files: climate_tools and climate tests."""
+
+    FAN_MODE = 8
+
+
 class ConfigFlow:
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__()
@@ -167,6 +173,7 @@ def ha_contract():
         "homeassistant.components.assist_satellite", AssistSatelliteEntityFeature=SatelliteFeature
     )
     module("homeassistant.components.media_player", MediaPlayerEntityFeature=PlayerFeature)
+    module("homeassistant.components.climate", ClimateEntityFeature=ClimateFeature)
     module("homeassistant.components.http", StaticPathConfig=lambda *args: args)
     return SimpleNamespace(
         apis=apis,
