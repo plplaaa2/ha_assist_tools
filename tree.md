@@ -42,7 +42,9 @@ assist_timers/
 ```
 
 Only one integration is included in custom_components. No separate conversation
-agent is installed; the existing LLM agent selects the Assist Timers API.
+agent is installed; the existing LLM agent independently selects the Assist Timer
+and Assist Devices APIs. The project display name is Assist Tools; the existing
+assist_timers directory and domain remain stable for compatibility.
 The .git directory, .venv, test/lint caches, backup archives, and dist artifacts
 are excluded from this source tree. Tests use HA boundary doubles; real HA and
 satellite testing remain a separate installation step.

@@ -34,7 +34,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Serve only the bundled alarm and register the shared tool provider."""
+    """Serve only the bundled alarm and register the separate tool providers."""
     runtime = Runtime()
     runtime.control = DeviceControl(hass)
     hass.data[DOMAIN] = runtime
@@ -108,7 +108,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         runtime.endpoints.pop(entry.entry_id, None)
         await endpoint.async_close()
         raise ConfigEntryNotReady("Scheduled action state could not be restored") from err
-    _LOGGER.info("Assist Timers ready for %s", satellite)
+    _LOGGER.info("Assist Tools ready for %s", satellite)
     return True
 
 

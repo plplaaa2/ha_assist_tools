@@ -1,6 +1,6 @@
 {
   "domain": "assist_timers",
-  "name": "Assist Timers",
+  "name": "Assist Tools",
   "codeowners": [],
   "config_flow": true,
   "dependencies": ["assist_satellite", "http", "llm", "media_player"],

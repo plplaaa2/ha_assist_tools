@@ -1,10 +1,10 @@
 {
-  "title": "Assist Timers",
+  "title": "Assist Tools",
   "config": {
     "step": {
       "user": {
         "title": "Assist 위성 연결",
-        "description": "명령을 받을 위성을 선택하세요. 같은 표시 이름의 사용 가능한 미디어 플레이어가 하나이면 자동 연결합니다. 없거나 여러 개이면 다음 화면에서 선택합니다. 기존 LLM 대화 에이전트에서 Assist Timers 도구 공급자를 활성화하세요.",
+        "description": "명령을 받을 위성을 선택하세요. 같은 표시 이름의 사용 가능한 미디어 플레이어가 하나이면 자동 연결합니다. 없거나 여러 개이면 다음 화면에서 선택합니다. 기존 LLM 대화 에이전트에서 Assist Timer 도구 공급자를 활성화하세요.",
         "data": {"satellite": "Assist 위성"}
       },
       "player": {

@@ -1,10 +1,10 @@
 {
-  "title": "Assist Timers",
+  "title": "Assist Tools",
   "config": {
     "step": {
       "user": {
         "title": "Connect an Assist satellite",
-        "description": "Choose the originating satellite. A unique available media player with the same display name is selected automatically. Otherwise you can select a player in the next step. Enable Assist Timers in your existing LLM conversation agent.",
+        "description": "Choose the originating satellite. A unique available media player with the same display name is selected automatically. Otherwise you can select a player in the next step. Enable Assist Timer in your existing LLM conversation agent.",
         "data": {"satellite": "Assist satellite"}
       },
       "player": {
