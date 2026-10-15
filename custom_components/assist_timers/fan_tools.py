@@ -1,4 +1,4 @@
-"""Offer explicit fan settings; related files: llm, conftest and test_fan_tools.
+"""Offer fan/air purifier settings; related files: llm, conftest, test_fan_tools.
 
 Per-entity capabilities and caller authorization are rechecked before execution.
 """
@@ -45,6 +45,12 @@ Ask which setting is meant if ambiguous. Use only the selected fan's supported
 settings below. Device presets are exact device-specific strings; never invent
 a preset or substitute another one. Ask if the target or preset is ambiguous.
 These tools act immediately on fan.* entities, not climate fan modes.
+fan.* includes air purifiers (공기청정기), not only fans and ventilators.
+Use AssistFanSetPresetMode for air purifier automatic/sleep requests when that
+specific device advertises a corresponding preset. Do not require a fan-shaped
+device or the word 'fan' in its name. Never assume auto or sleep is supported;
+use exact per-device preset values and clarify ambiguous mappings. Purifiers
+without oscillation or blade direction support must not receive those commands.
 Use the built-in Assist tools for power, speed and state queries. Do not call
 these setting tools to answer status questions. Never implicitly turn a fan on
 or off, change speed, or schedule a command. Unsupported requests must be
@@ -104,7 +110,7 @@ class FanTool(llm.Tool):
         self.name, _, key, _ = OPERATIONS[operation]
         self.title = self.name
         self.description = {
-            "preset": "Immediately set an exact preset_mode supported by the selected fan; not power, speed or a status query.",
+            "preset": "Immediately set an exact preset_mode on a fan or air purifier (공기청정기) represented by fan.*; use its supported presets for automatic/sleep modes, not power, speed or a status query.",
             "oscillate": "Immediately enable or disable a fan's side-to-side oscillation; not forward/reverse blade direction.",
             "direction": "Immediately set forward/reverse blade rotation on a fan supporting direction control; not side-to-side oscillation.",
         }[operation]
@@ -113,7 +119,7 @@ class FanTool(llm.Tool):
             {
                 probatio.Required(
                     "entity_id",
-                    description="Exact exposed fan entity supporting this setting; ask if ambiguous.",
+                    description="Exact exposed fan.* entity, including an air purifier, supporting this setting; ask if ambiguous.",
                 ): probatio.In([target["entity_id"] for target in targets]),
                 probatio.Required(
                     key,

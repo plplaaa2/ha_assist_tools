@@ -53,6 +53,32 @@ async def test_only_requested_setting_tools_are_exposed(fan, hass, ha_contract):
     hass.services.async_call.assert_not_awaited()
 
 
+@pytest.mark.parametrize("preset", ["auto", "sleep"])
+async def test_air_purifier_presets_without_rotation(fan, hass, ha_contract, preset):
+    """Exercise a purifier with presets only; related files: fan_tools prompt."""
+    entity = "fan.air_purifier"
+    hass.state_values[entity] = SimpleNamespace(
+        entity_id=entity,
+        name="거실 공기청정기",
+        state="on",
+        attributes={"supported_features": 8, "preset_modes": ["auto", "sleep"]},
+    )
+    hass.exposed = {entity}
+    tools, instance = await available(fan, hass, ha_contract)
+    assert set(tools) == {"preset"}
+    assert "공기청정기" in instance.api_prompt
+    assert "air purifier" in tools["preset"].description
+    result = await call(
+        tools["preset"], hass, ha_contract, {"entity_id": entity, "preset_mode": preset}
+    )
+    assert not result.error
+    assert hass.services.async_call.call_args.args == (
+        "fan",
+        "set_preset_mode",
+        {"entity_id": entity, "preset_mode": preset},
+    )
+
+
 @pytest.mark.parametrize(
     "operation,key,value,service,entity",
     [

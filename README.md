@@ -53,10 +53,16 @@ LLM에는 이미 예약된 확인 문구를 반복하지 않도록 안내하지�
 공개 정적 URL `/assist_timers/sounds/alarm_60s.mp3`에는 이 알람 파일 하나만 제공합니다.
 HACS 공개 등록은 아직 하지 않았습니다. 로컬 ZIP은 수동 설치용이며 HACS 릴리스 ZIP 설정은 사용하지 않습니다.
 
-## 선풍기 프리셋·회전·방향 설정
+## 선풍기·공기청정기 프리셋·회전·방향 설정
 
 기존 LLM 대화 에이전트에서 **Assist Fan** Tool provider를 활성화합니다.
 통합 갱신 후 HA를 재시작하고, 대상 `fan` 엔티티를 Assist에 노출하세요.
+
+`fan.*`로 등록된 공기청정기도 같은 provider에서 지원합니다.
+“거실 공기청정기를 자동 모드로 바꿔 줘”, “공기청정기를 수면 모드로 바꿔 줘”처럼
+요청할 수 있으며, 해당 기기의 `preset_modes`에 실제 제공되는 값만 사용합니다.
+회전·방향 기능이 없는 공기청정기에는 프리셋 도구만 제공합니다.
+`fan.*`가 아닌 다른 엔티티로 제공되는 기기는 이 provider의 대상이 아닙니다.
 
 - `AssistFanSetPresetMode`: 기기의 `preset_modes`에 있는 프리셋 설정
 - `AssistFanSetOscillation`: 지원하는 기기의 좌우 회전 켜기·끄기
