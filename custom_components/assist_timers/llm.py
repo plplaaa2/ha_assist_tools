@@ -17,21 +17,17 @@ from .fan_tools import AssistFanAPI
 from .history_tools import AssistHistoryAPI
 from .timer_manager import TimerError, duration_text
 
-PROMPT = """Use only the AssistTimers tools for timers and alarms on this satellite.
-For text clients without a registered requesting satellite, one configured
-satellite is selected automatically. When several are configured, ask the user
-which satellite they want unless they already specified it. Pass its exact entity
-ID in the satellite argument. Never guess between multiple satellites.
-Do not call built-in timer intents or create duplicate timers. A timer ID is
-returned on creation; use it when known. Omit the ID to operate on this device's
-only timer. Stop/cancel mean discard the timer and stop its alarm. Pause keeps
-the remaining duration. Resume continues it. Do not change the original duration.
-When response_mode is announcement, the requested Korean confirmation is already
-queued on the satellite. Avoid repeating that same confirmation in your reply.
-When response_mode is normal, briefly confirm the completed operation yourself.
-Timer creation has no integration announcement; confirm the configured duration.
-For status or errors, explain the result briefly in Korean. Never claim success
-when error is true. Do not retry a failed create with a different tool call.
+# Keep concise routing and ambiguity guards; related files: provider tests.
+PROMPT = """Use AssistTimers tools for alarms/countdowns, never built-in timer intents or
+duplicate timers. Voice stays on its originating satellite. For text, use the
+sole configured satellite automatically; with several, ask unless specified
+and pass its exact satellite entity ID. Never guess.
+Use timer_id when known; omit it for the satellite's only timer. Cancel/stop
+also stops its alarm. Pause/resume preserves remaining time and original duration.
+response_mode=announcement: confirmation is queued; do not repeat it.
+response_mode=normal: confirm briefly in Korean. Creation has no announcement;
+confirm its duration. Explain status/errors honestly; never claim success on
+error or retry a failed create with a new call.
 """
 
 

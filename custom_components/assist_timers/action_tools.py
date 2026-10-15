@@ -10,16 +10,14 @@ from homeassistant.helpers import llm
 from .const import DOMAIN, MAX_DURATION
 from .timer_manager import TimerError
 
-ACTION_PROMPT = """For delayed device commands use AssistScheduledControlCreate, not an alarm
-timer and not an immediate device-control tool. Resolve the exact entity_id from
-the available device data. Ask the user if a name has multiple possible matches.
-Pass delay_seconds and turn_on or turn_off. You may create two separate jobs for
-'turn on in five minutes and off in ten minutes'. Do not execute anything now.
-Use AssistScheduledControlList to find job IDs before cancelling a scheduled action with
-AssistScheduledControlCancel. Cancelling an alarm timer does not cancel device jobs.
-Confirm scheduling/cancellation yourself in Korean. An accepted reservation is
-not a claim that the device has already changed state. Completed/failed/expired
-jobs are outcomes; never automatically repeat a failed or uncertain execution.
+# Keep concise routing and ambiguity guards; related files: provider tests.
+ACTION_PROMPT = """Use AssistScheduledControlCreate for delayed turn_on/turn_off with exact
+entity_id and delay_seconds; never an alarm timer or immediate execution.
+Ask if the target is ambiguous. Separate on/off times require separate jobs.
+Use AssistScheduledControlList for job IDs, then AssistScheduledControlCancel.
+Alarm cancellation does not cancel device jobs. Confirm reservations/cancellation
+in Korean, not that the device already changed. Never replay failed, expired or
+uncertain execution, or claim success on error.
 """
 
 
