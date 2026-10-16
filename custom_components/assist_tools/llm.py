@@ -17,17 +17,14 @@ from .fan_tools import AssistFanAPI
 from .history_tools import AssistHistoryAPI
 from .timer_manager import TimerError, duration_text
 
-# Keep concise routing and ambiguity guards; related files: provider tests.
-PROMPT = """Use AssistTimers tools for alarms/countdowns, never built-in timer intents or
-duplicate timers. Voice stays on its originating satellite. For text, use the
-sole configured satellite automatically; with several, ask unless specified
-and pass its exact satellite entity ID. Never guess.
-Use timer_id when known; omit it for the satellite's only timer. Cancel/stop
-also stops its alarm. Pause/resume preserves remaining time and original duration.
-response_mode=announcement: confirmation is queued; do not repeat it.
+# 프롬프트 간소화 및 위성/에러 라우팅 지침 유지; 연결 파일: test_tools_and_output.py, test_timer_manager.py
+PROMPT = """Use AssistTimers tools for alarms/countdowns; never built-in timer intents.
+Voice stays on origin satellite. For text without a specified target, ask if multiple
+satellites exist; never guess. Pause/resume preserves remaining time. Cancel/stop
+also stops ringing alarms.
+response_mode=announcement: confirmation is queued on satellite; do not repeat it.
 response_mode=normal: confirm briefly in Korean. Creation has no announcement;
-confirm its duration. Explain status/errors honestly; never claim success on
-error or retry a failed create with a new call.
+confirm duration. Explain errors honestly; never claim success on error or retry automatically.
 """
 
 
@@ -49,17 +46,32 @@ class TimerTool(llm.Tool):
         }[operation]
         self.parameters = probatio.Schema(
             {
-                probatio.Required("duration_seconds"): probatio.All(
-                    int, probatio.Range(min=1, max=MAX_DURATION)
-                ),
-                probatio.Optional("name", default=""): probatio.All(str, probatio.Length(max=80)),
+                probatio.Required(
+                    "duration_seconds",
+                    description="Timer duration in seconds (1 to 604800).",
+                ): probatio.All(int, probatio.Range(min=1, max=MAX_DURATION)),
+                probatio.Optional(
+                    "name",
+                    default="",
+                    description="Optional timer label or name.",
+                ): probatio.All(str, probatio.Length(max=80)),
             }
             if operation == "create"
-            else {probatio.Optional("timer_id"): probatio.All(str, probatio.Length(min=1, max=64))}
+            else {
+                probatio.Optional(
+                    "timer_id",
+                    description="Exact timer ID to operate on; omit for the satellite's only timer.",
+                ): probatio.All(str, probatio.Length(min=1, max=64))
+            }
         )
         if satellites:
             self.parameters = self.parameters.extend(
-                {probatio.Optional("satellite"): probatio.In(satellites)}
+                {
+                    probatio.Optional(
+                        "satellite",
+                        description="Exact satellite entity ID to target when calling from text.",
+                    ): probatio.In(satellites)
+                }
             )
         self.annotations = llm.ToolAnnotations(
             read_only=operation == "status",

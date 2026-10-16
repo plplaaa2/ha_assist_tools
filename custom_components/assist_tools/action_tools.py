@@ -10,14 +10,12 @@ from homeassistant.helpers import llm
 from .const import DOMAIN, MAX_DURATION
 from .timer_manager import TimerError
 
-# Keep concise routing and ambiguity guards; related files: provider tests.
-ACTION_PROMPT = """Use AssistScheduledControlCreate for delayed turn_on/turn_off with exact
-entity_id and delay_seconds; never an alarm timer or immediate execution.
-Ask if the target is ambiguous. Separate on/off times require separate jobs.
-Use AssistScheduledControlList for job IDs, then AssistScheduledControlCancel.
-Alarm cancellation does not cancel device jobs. Confirm reservations/cancellation
-in Korean, not that the device already changed. Never replay failed, expired or
-uncertain execution, or claim success on error.
+# 프롬프트 간소화 및 예약/취소 지침 유지; 연결 파일: llm.py, test_scheduled_actions.py
+ACTION_PROMPT = """For delayed on/off control, use AssistScheduledControl tools; never alarm timers.
+Ask if target is ambiguous. Separate on/off times require separate jobs.
+Alarm cancellation does not cancel device jobs. Confirm reservations or
+cancellations in Korean, not that the device already changed state.
+Never replay uncertain execution or claim success on error.
 """
 
 
