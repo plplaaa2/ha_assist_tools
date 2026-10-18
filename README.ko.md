@@ -20,7 +20,7 @@ Assist 타이머, 기기 예약 제어, 냉난방 모드 제어를 제공하는 
 
 ### 자동 설치 (권장)
 
-[![Home Assistant에서 Home Assistant Community Store 저장소를 엽니다.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=plplaaa2&repository=ha_assist_tools&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository=https%3A%2F%2Fgithub.com%2Fplplaaa2%2Fha_assist_tools&category=integrate&owner=plplaaa2)
 
 ### 수동 설치
 
