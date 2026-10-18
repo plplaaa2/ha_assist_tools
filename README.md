@@ -20,7 +20,7 @@ A Home Assistant HACS custom integration that provides Assist timers, scheduled 
 
 ### Automatic installation (recommended)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=plplaaa2&repository=ha_assist_tools)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=plplaaa2&repository=ha_assist_tools&category=integration)
 
 ### Manual installation
 
