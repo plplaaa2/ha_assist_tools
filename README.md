@@ -36,3 +36,8 @@ Copy the entire `custom_components/assist_tools/` directory to the same path in 
 6. The satellite and media player must be able to reach Home Assistant's internal URL. Check the internal URL in Home Assistant network settings.
 
 Ordinary media playback may replace the media currently playing on the selected player. The source MP3 is preserved, and the integration plays a repeated `alarm_60s.mp3`. Playback is limited to 60 seconds, and an automatic stop is also scheduled. The public static URL `/assist_tools/sounds/alarm_60s.mp3` serves only this alarm file.
+
+## Contributors
+
+- [plplaaa2](https://github.com/plplaaa2) — project owner and maintainer
+- [OpenAI Codex](https://openai.com/codex/) — AI coding assistant

@@ -36,3 +36,8 @@ Assist 타이머, 기기 예약 제어, 냉난방 모드 제어를 제공하는 
 6. 위성과 미디어 플레이어가 Home Assistant 내부 URL에 접근할 수 있어야 합니다. Home Assistant 네트워크 설정에서 내부 URL을 확인하세요.
 
 일반 미디어 재생은 선택한 플레이어에서 재생 중인 미디어를 대체할 수 있습니다. 원본 MP3는 보존하고, 이를 반복한 `alarm_60s.mp3`를 재생합니다. 재생은 60초로 제한되며 자동 정지도 예약합니다. 공개 정적 URL `/assist_tools/sounds/alarm_60s.mp3`에서는 이 알람 파일 하나만 제공합니다.
+
+## 기여자
+
+- [plplaaa2](https://github.com/plplaaa2) — 프로젝트 소유자 및 유지관리자
+- [OpenAI Codex](https://openai.com/codex/) — AI 코딩 도우미
