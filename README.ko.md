@@ -7,7 +7,7 @@
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
-Assist 타이머, 기기 예약 제어, 냉난방 모드 제어를 제공하는 Home Assistant용 HACS 사용자 정의 통합입니다. 일정 시간이 지난 뒤 기기를 켜거나 끄도록 예약할 수도 있습니다.
+HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기기 예약 제어, 냉난방/팬 모드 제어를 제공하는 Home Assistant용 HACS 사용자 정의 통합입니다. 
 
 ## 기능
 
