@@ -7,7 +7,7 @@
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
-A Home Assistant HACS custom integration that provides Assist timers, scheduled device control, and climate mode control. It can also schedule devices to turn on or off after a delay.
+A Home Assistant HACS custom integration that provides Assist timers, scheduled device control, and climate/fan mode control not supported by Home Assistant's built-in voice assistant.
 
 ## Features
 
