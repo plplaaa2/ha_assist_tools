@@ -2,7 +2,17 @@
   "title": "Assist Tools",
   "config": {
     "step": {
+      "weather": {
+        "title": "Set up Assist Weather",
+        "description": "Choose the Home Assistant weather entity that Assist Weather should query. Enable Assist Weather in your existing LLM conversation agent.",
+        "data": {"weather_entity": "Weather entity"}
+      },
       "user": {
+        "title": "Choose Assist Tools setup",
+        "description": "Configure a satellite timer or connect a weather entity for Assist Weather.",
+        "data": {"setup_type": "Feature"}
+      },
+      "satellite": {
         "title": "Connect an Assist satellite",
         "description": "Choose the originating satellite. A unique available media player with the same display name is selected automatically. Otherwise you can select a player in the next step. Enable Assist Timer in your existing LLM conversation agent.",
         "data": {"satellite": "Assist satellite"}
@@ -19,6 +29,7 @@
       }
     },
     "error": {
+      "entity_not_found": "The selected weather entity is not available.",
       "invalid_satellite": "Select an existing Assist satellite.",
       "invalid_player": "Select an existing media player.",
       "announce_not_supported": "The satellite must support announcements.",

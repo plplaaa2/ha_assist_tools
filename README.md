@@ -7,7 +7,7 @@
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
-A Home Assistant HACS custom integration that provides Assist timers, scheduled device control, and climate/fan mode control not supported by Home Assistant's built-in voice assistant.
+A Home Assistant HACS custom integration that provides Assist timers, scheduled device control, weather, and climate/fan mode control.
 
 ## Features
 
@@ -15,6 +15,7 @@ A Home Assistant HACS custom integration that provides Assist timers, scheduled 
 - Control climate and fan modes
 - Set fan and air purifier presets, oscillation, and direction
 - View device state history
+- Query current conditions and up to seven days of forecasts from a selected Home Assistant weather entity
 
 ## Automatic and manual installation
 
@@ -27,6 +28,8 @@ A Home Assistant HACS custom integration that provides Assist timers, scheduled 
 Copy the entire `custom_components/assist_tools/` directory to the same path in your Home Assistant configuration directory, then restart Home Assistant.
 
 ## Setup
+
+When adding Assist Tools, choose **Assist Timer** to configure a satellite timer or **Assist Weather** to select a weather entity. Then enable **Assist Weather** in your existing LLM conversation agent's tool providers. Forecasts are returned when the selected entity supports daily forecasts.
 
 1. In **Settings → Devices & services → Add integration → Assist Tools**, select a satellite. If exactly one available media player has the same display name, it is connected automatically. If there is no unique match, a player selection screen appears. A player already used by another satellite timer is not selected automatically. You can change the player later through reconfiguration.
 2. The satellite must support `ANNOUNCE`; the media player must support `PLAY_MEDIA` and `STOP`. Configure each satellite once, and do not connect a player to multiple entries.

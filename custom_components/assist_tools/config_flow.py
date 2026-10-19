@@ -6,10 +6,16 @@ from different satellites stopping each other's playback.
 
 import probatio
 from homeassistant import config_entries
+from homeassistant.components.weather import DOMAIN as WEATHER_DOMAIN
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import selector
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
-from .const import CONF_PLAYER, CONF_SATELLITE, DOMAIN
+from .const import CONF_PLAYER, CONF_SATELLITE, CONF_WEATHER_ENTITY, DOMAIN
 from .satellite import validate_entities
 from .timer_manager import TimerError
 
@@ -33,6 +39,17 @@ def schema(
     )
 
 
+def weather_schema(default: str | None = None) -> probatio.Schema:
+    """Select the weather entity used by Assist Weather; related: weather_tools."""
+    return probatio.Schema(
+        {
+            probatio.Required(
+                CONF_WEATHER_ENTITY, **({"default": default} if default else {})
+            ): selector.EntitySelector(selector.EntitySelectorConfig(domain=WEATHER_DOMAIN))
+        }
+    )
+
+
 def matching_player(hass, satellite_id: str) -> str | None:
     """Match a unique display name; related files: satellite.py and translations.
 
@@ -42,7 +59,11 @@ def matching_player(hass, satellite_id: str) -> str | None:
     if satellite is None:
         return None
     name = satellite.name.strip().casefold()
-    used = {entry.data[CONF_PLAYER] for entry in hass.config_entries.async_entries(DOMAIN)}
+    used = {
+        entry.data[CONF_PLAYER]
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if CONF_PLAYER in entry.data
+    }
     matches = []
     for player in hass.states.async_all("media_player"):
         if player.name.strip().casefold() != name or player.entity_id in used:
@@ -67,20 +88,50 @@ def validate(hass, data: dict, entry_id: str | None = None) -> str:
     for entry in hass.config_entries.async_entries(DOMAIN):
         if entry.entry_id == entry_id:
             continue
-        other = registry.async_get(entry.data[CONF_SATELLITE])
+        satellite_id = entry.data.get(CONF_SATELLITE)
+        player_id = entry.data.get(CONF_PLAYER)
+        if satellite_id is None or player_id is None:
+            continue
+        other = registry.async_get(satellite_id)
         if other and other.device_id == satellite.device_id:
             raise TimerError("satellite_already_configured")
-        if entry.data[CONF_PLAYER] == data[CONF_PLAYER]:
+        if player_id == data[CONF_PLAYER]:
             raise TimerError("player_already_configured")
     return satellite.device_id
 
 
 class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Create one config entry per originating satellite device."""
+    """Configure a satellite timer or a selected weather provider."""
 
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
+        if user_input is None:
+            return self.async_show_form(
+                step_id="user",
+                data_schema=probatio.Schema(
+                    {
+                        probatio.Required("setup_type"): SelectSelector(
+                            SelectSelectorConfig(
+                                options=[
+                                    {"value": "timer", "label": "Assist Timer"},
+                                    {"value": "weather", "label": "Assist Weather"},
+                                ],
+                                mode=SelectSelectorMode.DROPDOWN,
+                            )
+                        )
+                    }
+                ),
+            )
+        if user_input.get("setup_type") == "weather" or "weather_entity" in user_input:
+            return await self.async_step_weather(
+                {key: value for key, value in user_input.items() if key != "setup_type"} or None
+            )
+        if "setup_type" in user_input:
+            return await self.async_step_satellite()
+        return await self.async_step_satellite(user_input)
+
+    async def async_step_satellite(self, user_input=None):
         errors = {}
         if user_input is not None:
             user_input = dict(user_input)
@@ -100,7 +151,7 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 state = self.hass.states.get(user_input[CONF_SATELLITE])
                 return self.async_create_entry(title=state.name, data=user_input)
         return self.async_show_form(
-            step_id="user", data_schema=schema(user_input, (CONF_SATELLITE,)), errors=errors
+            step_id="satellite", data_schema=schema(user_input, (CONF_SATELLITE,)), errors=errors
         )
 
     async def async_step_player(self, user_input=None):
@@ -128,4 +179,23 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_update_reload_and_abort(entry, data_updates=user_input)
         return self.async_show_form(
             step_id="reconfigure", data_schema=schema(user_input or entry.data), errors=errors
+        )
+
+    async def async_step_weather(self, user_input=None):
+        """Select one unique weather entity for the Assist Weather provider."""
+        errors = {}
+        if user_input is not None:
+            entity_id = user_input[CONF_WEATHER_ENTITY]
+            state = self.hass.states.get(entity_id)
+            if not entity_id.startswith(f"{WEATHER_DOMAIN}.") or state is None:
+                errors["base"] = "entity_not_found"
+            else:
+                await self.async_set_unique_id(entity_id)
+                self._abort_if_unique_id_configured()
+                title = state.attributes.get("friendly_name", entity_id)
+                return self.async_create_entry(title=title, data=user_input)
+        return self.async_show_form(
+            step_id="weather",
+            data_schema=weather_schema(user_input.get(CONF_WEATHER_ENTITY) if user_input else None),
+            errors=errors,
         )

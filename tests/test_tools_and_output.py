@@ -333,7 +333,9 @@ def test_metadata_and_translations_match():
     english = json.loads((base / "strings.json").read_text(encoding="utf-8"))
     korean = json.loads((base / "translations/ko.json").read_text(encoding="utf-8"))
     assert english["config"]["error"].keys() == korean["config"]["error"].keys()
-    assert set(korean["config"]["step"]["user"]["data"]) == {"satellite"}
+    assert set(korean["config"]["step"]["user"]["data"]) == {"setup_type"}
+    assert set(korean["config"]["step"]["satellite"]["data"]) == {"satellite"}
+    assert set(korean["config"]["step"]["weather"]["data"]) == {"weather_entity"}
     assert set(korean["config"]["step"]["player"]["data"]) == {"media_player"}
 
 
@@ -389,6 +391,28 @@ def test_matching_player_uses_unique_display_name(load_module, hass):
     )
 
 
+def test_matching_player_ignores_entries_without_player(load_module, hass):
+    hass.config_entries.async_entries = lambda domain: [
+        SimpleNamespace(data={"satellite": "assist_satellite.microphone"}),
+        SimpleNamespace(data={"weather_entity": "weather.home"}),
+    ]
+    assert (
+        load_module("config_flow").matching_player(hass, "assist_satellite.kitchen")
+        == "media_player.kitchen"
+    )
+
+
+def test_config_validation_ignores_non_timer_entries(load_module, hass):
+    config = load_module("config_flow")
+    hass.config_entries.async_entries = lambda domain: [
+        SimpleNamespace(entry_id="weather", data={"weather_entity": "weather.home"})
+    ]
+    assert config.validate(
+        hass,
+        {"satellite": "assist_satellite.kitchen", "media_player": "media_player.kitchen"},
+    ) == "kitchen"
+
+
 @pytest.mark.parametrize("automatic", [True, False])
 async def test_setup_flow_auto_connects_or_offers_manual_player(load_module, hass, automatic):
     flow = load_module("config_flow").AssistTimersConfigFlow()
@@ -400,6 +424,8 @@ async def test_setup_flow_auto_connects_or_offers_manual_player(load_module, has
     if not automatic:
         hass.state_values["media_player.kitchen"].name = "Different display name"
     result = await flow.async_step_user({"satellite": "assist_satellite.kitchen"})
+    if not automatic:
+        assert result["step_id"] == "player"
     if not automatic:
         assert result["step_id"] == "player"
         result = await flow.async_step_player({"media_player": "media_player.kitchen"})
