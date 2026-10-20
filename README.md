@@ -16,6 +16,7 @@ A Home Assistant HACS custom integration that provides Assist timers, scheduled 
 - Set fan and air purifier presets, oscillation, and direction
 - View device state history
 - Query current conditions and up to seven days of forecasts from a selected Home Assistant weather entity
+- Launch configured apps on Google TV (title search and content playback are not included)
 
 ## Automatic and manual installation
 
@@ -29,7 +30,17 @@ Copy the entire `custom_components/assist_tools/` directory to the same path in 
 
 ## Setup
 
-When adding Assist Tools, choose **Assist Timer** to configure a satellite timer or **Assist Weather** to select a weather entity. Then enable **Assist Weather** in your existing LLM conversation agent's tool providers. Forecasts are returned when the selected entity supports daily forecasts.
+When adding Assist Tools, choose **Assist Timer** for a satellite timer, **Assist Weather** to select a weather entity, or **Assist Google TV** to configure app launching. Enable each desired provider in your existing LLM conversation agent.
+
+### Google TV app launching
+
+1. Set up and connect the Home Assistant **Android TV Remote** or **Android Debug Bridge (ADB)** integration first.
+2. Add **Assist Google TV**, choose the control method, then select its entity and enter configured apps.
+3. Apps are a JSON array of `name` and `launch` values. Remote uses app deep links (for example, YouTube `https://www.youtube.com`, Netflix `netflix://`, Disney+ `https://www.disneyplus.com`); ADB uses package IDs (for example, YouTube `com.google.android.youtube.tv`, Netflix `com.netflix.ninja`, Disney+ `com.disney.disneyplus`).
+4. Enable **Assist Google TV** in the existing LLM agent. The tool launches apps only; it does not search for titles or play a specific item.
+5. Remote cannot verify app installation in advance. If the ADB entity exposes `source_list`, Assist Tools checks it; otherwise, or when launch fails, the response explains that the app may be missing, unsupported, or disconnected. Install missing apps from the TV app store.
+
+Title search and content playback are future work.
 
 1. In **Settings → Devices & services → Add integration → Assist Tools**, select a satellite. If exactly one available media player has the same display name, it is connected automatically. If there is no unique match, a player selection screen appears. A player already used by another satellite timer is not selected automatically. You can change the player later through reconfiguration.
 2. The satellite must support `ANNOUNCE`; the media player must support `PLAY_MEDIA` and `STOP`. Configure each satellite once, and do not connect a player to multiple entries.

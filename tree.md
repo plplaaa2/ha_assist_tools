@@ -31,6 +31,7 @@ assist_timers/
         |-- climate_tools.py        # Independent climate provider, capabilities and calls
         |-- fan_tools.py            # Independent fan settings provider and validation
         |-- history_tools.py        # Read-only Recorder history, chunking and serialization
+        |-- google_tv_tools.py     # Configured TV app launching through Remote or ADB
         |-- weather_tools.py        # Selected weather entity conditions and daily forecast provider
         |-- device_control.py       # Assist exposure, permissions, power capabilities
         |-- manifest.json           # HA metadata, config flow, version 0.1.0

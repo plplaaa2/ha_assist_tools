@@ -17,8 +17,6 @@ class WeatherTool(llm.Tool):
     name = "assist_weather__get_weather"
     title = "날씨 조회"
     description = (
-        "선택한 Home Assistant 날씨 엔티티의 현재 날씨와 일간 예보를 조회합니다. "
-        "날씨 질문에 답하기 전에 이 도구를 호출하세요. "
         "Get current conditions and the daily forecast from the configured Home Assistant weather entity. "
         "Always call this tool before answering weather questions."
     )
@@ -115,10 +113,8 @@ class AssistWeatherAPI(llm.API):
         return llm.APIInstance(
             api=self,
             api_prompt=(
-                "날씨 질문에 답하기 전에 assist_weather__get_weather 도구를 호출하세요. "
-                "이 도구는 설정한 날씨 엔티티의 최신 상태와 일간 예보를 반환합니다. "
-                "조회 결과에 근거해 실용적인 조언을 덧붙이되, 결과에 없는 날씨 상황이나 위험을 추측하지 마세요. "
                 "Call assist_weather__get_weather before answering weather questions. "
+                "It returns current conditions and the daily forecast from the configured weather entity. "
                 "Give practical advice supported by the returned conditions and forecast; "
                 "do not infer conditions or risks absent from the result."
             ),

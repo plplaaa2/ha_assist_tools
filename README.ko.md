@@ -16,6 +16,7 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 - 선풍기와 공기청정기의 프리셋, 회전, 방향 설정
 - 기기 상태 이력 조회
 - 선택한 Home Assistant 날씨 엔티티의 현재 날씨와 최대 7일 일간 예보 조회
+- Google TV의 설정된 앱 실행 (타이틀 검색 및 콘텐츠 재생은 미지원)
 
 ## 자동 설치 및 수동 설치
 
@@ -29,7 +30,17 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 
 ## 설정
 
-Assist Tools를 추가할 때 **Assist Timer**를 선택하면 위성 타이머를 설정하고, **Assist Weather**를 선택하면 날씨 엔티티를 연결합니다. 이후 기존 LLM 대화 에이전트의 도구 제공자에서 **Assist Weather**를 활성화하세요. 예보는 선택한 엔티티가 일간 예보를 지원할 때 반환됩니다.
+Assist Tools를 추가할 때 **Assist Timer**는 위성 타이머, **Assist Weather**는 날씨 엔티티, **Assist Google TV**는 Google TV 앱 실행을 설정합니다. 각 기능을 기존 LLM 대화 에이전트에서 별도 도구 제공자로 활성화하세요.
+
+### Google TV 앱 실행
+
+1. 먼저 Home Assistant에서 **Android TV Remote** 또는 **Android Debug Bridge (ADB)** 통합을 설정하고 TV와 연결하세요.
+2. Assist Tools 설정에서 **Assist Google TV**와 제어 방식을 선택한 뒤, 해당 엔티티와 앱 목록을 입력합니다.
+3. 앱 목록은 JSON 배열이며 각 항목은 `name`과 `launch`를 가집니다. Remote는 앱의 딥링크(예: YouTube `https://www.youtube.com`, Netflix `netflix://`, Disney+ `https://www.disneyplus.com`)를, ADB는 앱 패키지 ID(예: YouTube `com.google.android.youtube.tv`, Netflix `com.netflix.ninja`, Disney+ `com.disney.disneyplus`)를 사용합니다.
+4. 기존 LLM 대화 에이전트의 도구 제공자에서 **Assist Google TV**를 켭니다. 이 도구는 앱만 실행하며 콘텐츠 제목을 검색하거나 특정 타이틀을 재생하지 않습니다.
+5. Remote 방식은 앱 설치 여부를 미리 판별할 수 없습니다. ADB 엔티티가 `source_list`를 제공하면 해당 목록으로 확인하며, 그렇지 않거나 실행에 실패하면 앱 미설치·실행값 미지원·연결 오류 가능성을 안내합니다. 앱이 없으면 TV의 앱 스토어에서 설치하세요.
+
+타이틀 검색 후 콘텐츠를 바로 재생하는 기능은 향후 과제입니다.
 
 1. **설정 → 기기 및 서비스 → 통합 추가 → Assist Tools**에서 위성을 선택합니다. 표시 이름이 같은 사용 가능한 미디어 플레이어가 하나이면 자동 연결합니다. 일치하는 플레이어를 하나로 정할 수 없으면 플레이어 선택 화면이 표시됩니다. 다른 위성 타이머에서 사용 중인 플레이어는 자동 선택하지 않습니다. 연결한 뒤 재구성에서 플레이어를 변경할 수 있습니다.
 2. 위성은 `ANNOUNCE`, 미디어 플레이어는 `PLAY_MEDIA`와 `STOP`을 지원해야 합니다. 위성마다 한 번씩 설정하고, 플레이어를 여러 항목에 중복 연결하지 마세요.

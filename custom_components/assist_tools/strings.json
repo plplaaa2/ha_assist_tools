@@ -7,9 +7,19 @@
         "description": "Choose the Home Assistant weather entity that Assist Weather should query. Enable Assist Weather in your existing LLM conversation agent.",
         "data": {"weather_entity": "Weather entity"}
       },
+      "google_tv_method": {
+        "title": "Choose Google TV control method",
+        "description": "Select the Home Assistant integration already connected to your Google TV.",
+        "data": {"tv_method": "Control method"}
+      },
+      "google_tv_entities": {
+        "title": "Configure Google TV apps",
+        "description": "Enter a JSON list of app names and launch values. For Android TV Remote use supported deep links; for ADB use package IDs. This only opens apps and does not play titles.",
+        "data": {"tv_remote": "Android TV Remote entity", "tv_player": "Android TV ADB media player", "tv_apps": "Apps (JSON)"}
+      },
       "user": {
         "title": "Choose Assist Tools setup",
-        "description": "Configure a satellite timer or connect a weather entity for Assist Weather.",
+        "description": "Configure a satellite timer, weather provider, or Google TV app launcher.",
         "data": {"setup_type": "Feature"}
       },
       "satellite": {
@@ -30,6 +40,7 @@
     },
     "error": {
       "entity_not_found": "The selected weather entity is not available.",
+      "invalid_apps": "Enter a valid JSON array with app name and launch fields (up to 30 apps).",
       "invalid_satellite": "Select an existing Assist satellite.",
       "invalid_player": "Select an existing media player.",
       "announce_not_supported": "The satellite must support announcements.",

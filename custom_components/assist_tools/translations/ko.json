@@ -7,9 +7,19 @@
         "description": "Assist Weather가 조회할 Home Assistant 날씨 엔티티를 선택하세요. 기존 LLM 대화 에이전트에서 Assist Weather를 활성화하세요.",
         "data": {"weather_entity": "날씨 엔티티"}
       },
+      "google_tv_method": {
+        "title": "Google TV 제어 방식 선택",
+        "description": "Google TV에 이미 연결된 Home Assistant 통합을 선택하세요.",
+        "data": {"tv_method": "제어 방식"}
+      },
+      "google_tv_entities": {
+        "title": "Google TV 앱 설정",
+        "description": "앱 이름과 실행값을 JSON 목록으로 입력하세요. Remote는 지원되는 딥링크, ADB는 패키지 ID를 사용합니다. 앱 실행만 지원하며 타이틀 재생은 지원하지 않습니다.",
+        "data": {"tv_remote": "Android TV Remote 엔티티", "tv_player": "Android TV ADB 미디어 플레이어", "tv_apps": "앱 목록 (JSON)"}
+      },
       "user": {
         "title": "Assist Tools 설정 선택",
-        "description": "위성 타이머를 설정하거나 Assist Weather에 날씨 엔티티를 연결하세요.",
+        "description": "위성 타이머, 날씨 provider 또는 Google TV 앱 실행을 설정하세요.",
         "data": {"setup_type": "기능"}
       },
       "satellite": {
@@ -29,6 +39,7 @@
       }
     },
     "error": {
+      "invalid_apps": "앱 이름과 launch 값이 포함된 올바른 JSON 배열을 입력하세요 (최대 30개).",
       "entity_not_found": "선택한 날씨 엔티티를 사용할 수 없습니다.",
       "invalid_satellite": "등록된 Assist 위성을 선택하세요.",
       "invalid_player": "등록된 미디어 플레이어를 선택하세요.",

@@ -15,7 +15,16 @@ from homeassistant.helpers.selector import (
     SelectSelectorMode,
 )
 
-from .const import CONF_PLAYER, CONF_SATELLITE, CONF_WEATHER_ENTITY, DOMAIN
+from .const import (
+    CONF_PLAYER,
+    CONF_SATELLITE,
+    CONF_TV_APPS,
+    CONF_TV_METHOD,
+    CONF_TV_PLAYER,
+    CONF_TV_REMOTE,
+    CONF_WEATHER_ENTITY,
+    DOMAIN,
+)
 from .satellite import validate_entities
 from .timer_manager import TimerError
 
@@ -48,6 +57,49 @@ def weather_schema(default: str | None = None) -> probatio.Schema:
             ): selector.EntitySelector(selector.EntitySelectorConfig(domain=WEATHER_DOMAIN))
         }
     )
+
+
+def tv_schema(defaults: dict | None = None, fields: tuple = ()) -> probatio.Schema:
+    """Build Google TV selectors; related files: google_tv_tools and translations."""
+    defaults = defaults or {}
+    schema_fields = {}
+    if CONF_TV_METHOD in fields:
+        schema_fields[
+            probatio.Required(
+                CONF_TV_METHOD,
+                **({"default": defaults[CONF_TV_METHOD]} if CONF_TV_METHOD in defaults else {}),
+            )
+        ] = SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    {"value": "remote", "label": "Android TV Remote"},
+                    {"value": "adb", "label": "Android Debug Bridge (ADB)"},
+                ],
+                mode=SelectSelectorMode.DROPDOWN,
+            )
+        )
+    if CONF_TV_REMOTE in fields:
+        schema_fields[
+            probatio.Required(
+                CONF_TV_REMOTE,
+                **({"default": defaults[CONF_TV_REMOTE]} if CONF_TV_REMOTE in defaults else {}),
+            )
+        ] = selector.EntitySelector(selector.EntitySelectorConfig(domain="remote"))
+    if CONF_TV_PLAYER in fields:
+        schema_fields[
+            probatio.Required(
+                CONF_TV_PLAYER,
+                **({"default": defaults[CONF_TV_PLAYER]} if CONF_TV_PLAYER in defaults else {}),
+            )
+        ] = selector.EntitySelector(selector.EntitySelectorConfig(domain="media_player"))
+    if CONF_TV_APPS in fields:
+        schema_fields[
+            probatio.Required(
+                CONF_TV_APPS,
+                **({"default": defaults[CONF_TV_APPS]} if CONF_TV_APPS in defaults else {}),
+            )
+        ] = probatio.All(str, probatio.Length(min=1, max=4000))
+    return probatio.Schema(schema_fields)
 
 
 def matching_player(hass, satellite_id: str) -> str | None:
@@ -116,6 +168,7 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 options=[
                                     {"value": "timer", "label": "Assist Timer"},
                                     {"value": "weather", "label": "Assist Weather"},
+                                    {"value": "google_tv", "label": "Assist Google TV"},
                                 ],
                                 mode=SelectSelectorMode.DROPDOWN,
                             )
@@ -125,6 +178,10 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
         if user_input.get("setup_type") == "weather" or "weather_entity" in user_input:
             return await self.async_step_weather(
+                {key: value for key, value in user_input.items() if key != "setup_type"} or None
+            )
+        if user_input.get("setup_type") == "google_tv" or CONF_TV_METHOD in user_input:
+            return await self.async_step_google_tv_method(
                 {key: value for key, value in user_input.items() if key != "setup_type"} or None
             )
         if "setup_type" in user_input:
@@ -197,5 +254,68 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="weather",
             data_schema=weather_schema(user_input.get(CONF_WEATHER_ENTITY) if user_input else None),
+            errors=errors,
+        )
+
+    async def async_step_google_tv_method(self, user_input=None):
+        if user_input is not None:
+            self._tv_method = user_input[CONF_TV_METHOD]
+            return await self.async_step_google_tv_entities()
+        return self.async_show_form(
+            step_id="google_tv_method",
+            data_schema=tv_schema(fields=(CONF_TV_METHOD,)),
+        )
+
+    async def async_step_google_tv_entities(self, user_input=None):
+        method = getattr(self, "_tv_method", "remote")
+        fields = (
+            (CONF_TV_REMOTE, CONF_TV_APPS)
+            if method == "remote"
+            else (
+                CONF_TV_PLAYER,
+                CONF_TV_APPS,
+            )
+        )
+        errors = {}
+        if user_input is not None:
+            import json
+
+            try:
+                apps = json.loads(user_input[CONF_TV_APPS])
+                if not isinstance(apps, list) or not apps or len(apps) > 30:
+                    raise ValueError
+                if any(
+                    not isinstance(app, dict)
+                    or not isinstance(app.get("name"), str)
+                    or not app["name"].strip()
+                    or not isinstance(app.get("launch"), str)
+                    or not app["launch"].strip()
+                    for app in apps
+                ):
+                    raise ValueError
+            except ValueError, TypeError:
+                errors[CONF_TV_APPS] = "invalid_apps"
+            else:
+                data = {CONF_TV_METHOD: method, **user_input, CONF_TV_APPS: apps}
+                entity_id = data[CONF_TV_REMOTE if method == "remote" else CONF_TV_PLAYER]
+                state = self.hass.states.get(entity_id)
+                if state is None:
+                    errors["base"] = "entity_not_found"
+                else:
+                    await self.async_set_unique_id(f"google_tv_{method}_{entity_id}")
+                    self._abort_if_unique_id_configured()
+                    name = state.attributes.get("friendly_name", state.name)
+                    return self.async_create_entry(title=f"Google TV: {name}", data=data)
+        return self.async_show_form(
+            step_id="google_tv_entities",
+            data_schema=tv_schema(
+                {
+                    **(user_input or {}),
+                    CONF_TV_APPS: (user_input or {}).get(
+                        CONF_TV_APPS, '[{"name":"YouTube","launch":"https://www.youtube.com"}]'
+                    ),
+                },
+                fields,
+            ),
             errors=errors,
         )
