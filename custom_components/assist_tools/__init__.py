@@ -84,7 +84,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return True
     if CONF_SATELLITE not in entry.data:
         _LOGGER.warning(
-            "Skipping unsupported legacy Assist Tools entry %s; remove it from Devices & services",
+            "Skipping unsupported Assist Tools entry %s",
             entry.entry_id,
         )
         return True

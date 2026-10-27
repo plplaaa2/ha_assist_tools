@@ -54,7 +54,7 @@
     "abort": {
       "already_configured": "이미 설정된 위성입니다.",
       "reconfigure_successful": "설정을 변경했습니다.",
-      "unsupported_entry": "이전 버전의 TV 설정은 더 이상 지원되지 않습니다. 기기 및 서비스에서 해당 항목을 삭제하세요."
+      "unsupported_entry": "지원하지 않는 설정입니다."
     }
   }
 }

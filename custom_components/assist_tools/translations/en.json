@@ -53,7 +53,7 @@
     "abort": {
       "already_configured": "This satellite is already configured.",
       "reconfigure_successful": "Settings updated.",
-      "unsupported_entry": "This legacy entry is no longer supported. Remove it from Devices & services."
+      "unsupported_entry": "This configuration is not supported."
     }
   }
 }
