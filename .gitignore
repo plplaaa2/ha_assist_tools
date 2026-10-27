@@ -8,3 +8,6 @@ __pycache__/
 !.env.example
 backup/
 dist/
+
+caution.jsonl
+changelog.jsonl
