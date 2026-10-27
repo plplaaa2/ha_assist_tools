@@ -3,7 +3,7 @@
 [🇺🇸 English Version](./README.md) | [🇰🇷 한국어 버전](./README.ko.md)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-![version](https://img.shields.io/badge/version-v0.1.0-blue.svg?style=for-the-badge)
+![version](https://img.shields.io/badge/version-v0.2.0-blue.svg?style=for-the-badge)
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
