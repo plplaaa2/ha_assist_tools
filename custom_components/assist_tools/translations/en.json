@@ -2,20 +2,41 @@
   "title": "Assist Tools",
   "config": {
     "step": {
+      "weather": {
+        "title": "Set up Assist Weather",
+        "description": "Choose the Home Assistant weather entity that Assist Weather should query. Enable Assist Weather in your existing LLM conversation agent.",
+        "data": {
+          "weather_entity": "Weather entity"
+        }
+      },
       "user": {
+        "title": "Choose Assist Tools setup",
+        "description": "Configure a satellite timer or weather provider.",
+        "data": {
+          "setup_type": "Feature"
+        }
+      },
+      "satellite": {
         "title": "Connect an Assist satellite",
         "description": "Choose the originating satellite. A unique available media player with the same display name is selected automatically. Otherwise you can select a player in the next step. Enable Assist Timer in your existing LLM conversation agent.",
-        "data": {"satellite": "Assist satellite"}
+        "data": {
+          "satellite": "Assist satellite"
+        }
       },
       "player": {
         "title": "Select an alarm media player",
         "description": "No unique usable player with the satellite's display name was found. Select the player that should sound this satellite's alarm.",
-        "data": {"media_player": "Alarm media player"}
+        "data": {
+          "media_player": "Alarm media player"
+        }
       },
       "reconfigure": {
         "title": "Update satellite settings",
         "description": "Cancel any active timer before updating the media player. To change the satellite device, remove this entry and add a new one.",
-        "data": {"satellite": "Assist satellite", "media_player": "Alarm media player"}
+        "data": {
+          "satellite": "Assist satellite",
+          "media_player": "Alarm media player"
+        }
       }
     },
     "error": {
@@ -29,6 +50,10 @@
       "cannot_change_satellite": "The satellite device cannot be changed in this entry.",
       "cancel_timer_before_reconfigure": "Cancel the existing timer before reconfiguring."
     },
-    "abort": {"already_configured": "This satellite is already configured.", "reconfigure_successful": "Settings updated."}
+    "abort": {
+      "already_configured": "This satellite is already configured.",
+      "reconfigure_successful": "Settings updated.",
+      "unsupported_entry": "This configuration is not supported."
+    }
   }
 }

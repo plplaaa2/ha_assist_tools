@@ -3,7 +3,7 @@
 [🇺🇸 English Version](./README.md) | [🇰🇷 한국어 버전](./README.ko.md)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-![version](https://img.shields.io/badge/version-v0.1.0-blue.svg?style=for-the-badge)
+![version](https://img.shields.io/badge/version-v0.2.0-blue.svg?style=for-the-badge)
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
@@ -15,6 +15,7 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 - 냉난방 및 팬 모드 제어
 - 선풍기와 공기청정기의 프리셋, 회전, 방향 설정
 - 기기 상태 이력 조회
+- 선택한 Home Assistant 날씨 엔티티의 현재 날씨와 최대 7일 일간 예보 조회
 
 ## 자동 설치 및 수동 설치
 
@@ -27,6 +28,10 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 `custom_components/assist_tools/` 폴더 전체를 Home Assistant 설정 폴더의 같은 경로에 복사한 뒤 Home Assistant를 재시작합니다.
 
 ## 설정
+
+Assist Tools를 추가할 때 **Assist Timer**는 위성 타이머, **Assist Weather**는 날씨 엔티티를 설정합니다. 각 기능을 기존 LLM 대화 에이전트에서 별도 도구 제공자로 활성화하세요.
+
+### Assist Timer 설정
 
 1. **설정 → 기기 및 서비스 → 통합 추가 → Assist Tools**에서 위성을 선택합니다. 표시 이름이 같은 사용 가능한 미디어 플레이어가 하나이면 자동 연결합니다. 일치하는 플레이어를 하나로 정할 수 없으면 플레이어 선택 화면이 표시됩니다. 다른 위성 타이머에서 사용 중인 플레이어는 자동 선택하지 않습니다. 연결한 뒤 재구성에서 플레이어를 변경할 수 있습니다.
 2. 위성은 `ANNOUNCE`, 미디어 플레이어는 `PLAY_MEDIA`와 `STOP`을 지원해야 합니다. 위성마다 한 번씩 설정하고, 플레이어를 여러 항목에 중복 연결하지 마세요.

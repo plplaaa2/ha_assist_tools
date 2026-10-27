@@ -151,6 +151,9 @@ def ha_contract():
         "homeassistant.helpers.selector",
         EntitySelector=lambda config: str,
         EntitySelectorConfig=lambda **kwargs: kwargs,
+        SelectSelector=lambda config: str,
+        SelectSelectorConfig=lambda **kwargs: kwargs,
+        SelectSelectorMode=SimpleNamespace(DROPDOWN="dropdown"),
     )
     module("homeassistant.helpers.network", get_url=lambda hass, **kwargs: "http://ha.test:8123")
     apis = {}
@@ -184,6 +187,7 @@ def ha_contract():
     module("homeassistant.components.media_player", MediaPlayerEntityFeature=PlayerFeature)
     module("homeassistant.components.climate", ClimateEntityFeature=ClimateFeature)
     module("homeassistant.components.fan", FanEntityFeature=FanFeature)
+    module("homeassistant.components.weather", DOMAIN="weather")
     module("homeassistant.components.recorder")
     module(
         "homeassistant.components.recorder.history",

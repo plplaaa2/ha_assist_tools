@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import probatio
 from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.weather import DOMAIN as WEATHER_DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
@@ -19,6 +20,7 @@ from .const import (
     ALARM_URL,
     CONF_PLAYER,
     CONF_SATELLITE,
+    CONF_WEATHER_ENTITY,
     DOMAIN,
     MAX_DURATION,
     STORAGE_VERSION,
@@ -29,6 +31,7 @@ from .runtime import Endpoint, Runtime
 from .satellite import SatelliteOutput, validate_entities
 from .scheduled_actions import ScheduledActions
 from .timer_manager import TimerError, TimerManager, duration_text
+from .weather_tools import AssistWeatherAPI
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,6 +69,25 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Restore one timer for its configured satellite and media player."""
+    if entry.data.get(CONF_WEATHER_ENTITY):
+        entity_id = entry.data[CONF_WEATHER_ENTITY]
+        state = hass.states.get(entity_id)
+        if state is None or not entity_id.startswith(f"{WEATHER_DOMAIN}."):
+            raise ConfigEntryNotReady("Selected weather entity is not available")
+        from homeassistant.helpers.llm import async_register_api
+
+        unregister = async_register_api(
+            hass,
+            AssistWeatherAPI(hass, entity_id, state.attributes.get("friendly_name", entity_id)),
+        )
+        entry.async_on_unload(unregister)
+        return True
+    if CONF_SATELLITE not in entry.data:
+        _LOGGER.warning(
+            "Skipping unsupported Assist Tools entry %s",
+            entry.entry_id,
+        )
+        return True
     satellite = entry.data[CONF_SATELLITE]
     player = entry.data[CONF_PLAYER]
     registry_entry = er.async_get(hass).async_get(satellite)
@@ -114,6 +136,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Stop owned alarm output and remove the endpoint during unload."""
+    if entry.data.get(CONF_WEATHER_ENTITY):
+        return True
     runtime: Runtime = hass.data[DOMAIN]
     endpoint = runtime.endpoints.get(entry.entry_id)
     if (
@@ -138,6 +162,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Remove persisted timer data only when the configuration is deleted."""
+    if entry.data.get(CONF_WEATHER_ENTITY):
+        return
     await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}").async_remove()
     if not any(
         other.entry_id != entry.entry_id for other in hass.config_entries.async_entries(DOMAIN)
