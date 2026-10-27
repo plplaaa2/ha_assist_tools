@@ -26,7 +26,6 @@ from .const import (
     STORAGE_VERSION,
 )
 from .device_control import DeviceControl
-from .google_tv_tools import AssistGoogleTVAPI
 from .llm import register_api
 from .runtime import Endpoint, Runtime
 from .satellite import SatelliteOutput, validate_entities
@@ -83,17 +82,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         entry.async_on_unload(unregister)
         return True
-    if entry.data.get("tv_method") in ("remote", "adb"):
-        from homeassistant.helpers.llm import async_register_api
-
-        entity_id = entry.data.get(
-            "tv_remote" if entry.data["tv_method"] == "remote" else "tv_player"
+    if CONF_SATELLITE not in entry.data:
+        _LOGGER.warning(
+            "Skipping unsupported legacy Assist Tools entry %s; remove it from Devices & services",
+            entry.entry_id,
         )
-        state = hass.states.get(entity_id)
-        if state is None:
-            raise ConfigEntryNotReady("Selected Google TV entity is not available")
-        api = AssistGoogleTVAPI(hass, entry)
-        entry.async_on_unload(async_register_api(hass, api))
         return True
     satellite = entry.data[CONF_SATELLITE]
     player = entry.data[CONF_PLAYER]
