@@ -21,7 +21,7 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 
 ### 자동 설치 (권장)
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository=https%3A%2F%2Fgithub.com%2Fplplaaa2%2Fha_assist_tools&category=integrate&owner=plplaaa2)
+[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=plplaaa2&repository=ha_assist_tools&category=integration)
 
 ### 수동 설치
 
