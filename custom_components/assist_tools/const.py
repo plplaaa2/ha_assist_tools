@@ -5,6 +5,7 @@ DOMAIN = "assist_tools"
 API_ID = "assist_timers"
 CONF_SATELLITE = "satellite"
 CONF_PLAYER = "media_player"
+CONF_GOOGLE_SPEAKER = "google_speaker"
 CONF_WEATHER_ENTITY = "weather_entity"
 ALARM_SECONDS = 60
 MAX_DURATION = 604800
