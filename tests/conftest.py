@@ -143,6 +143,7 @@ def ha_contract():
     )
     module("homeassistant.config_entries", ConfigEntry=object, ConfigFlow=ConfigFlow)
     module("homeassistant.helpers")
+    module("homeassistant.helpers.config_validation", config_entry_only_config_schema=lambda _: dict)
     module("homeassistant.helpers.entity_platform", AddEntitiesCallback=object)
     module("homeassistant.helpers.entity_registry", async_get=lambda hass: hass.registry)
     module("homeassistant.helpers.storage", Store=Store)
