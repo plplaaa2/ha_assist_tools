@@ -48,6 +48,10 @@ Choose **Assist + Google Speaker** when adding Assist Tools, then select the mic
 
 Timer alarms play on the Google speaker. The satellite can run timer and scheduled control commands without announcement support. For regular Assist replies on the same speaker, forward the URL from ESPHome's `on_tts_end` to Home Assistant's `media_player.play_media`. The Google speaker must be able to reach Home Assistant's internal URL.
 
+## License
+
+The project code is licensed under the [MIT License](LICENSE). The bundled alarm audio and its loop use the terms of the [original Pixabay sound](https://pixabay.com/sound-effects/beep-alarm-366507/).
+
 ## Contributors
 
 - [plplaaa2](https://github.com/plplaaa2) — project owner and maintainer

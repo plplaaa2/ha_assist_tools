@@ -4,6 +4,8 @@
 assist_timers/
 |-- .gitattributes                  # Text and line-ending rules
 |-- .gitignore                      # Local artifacts and secrets exclusions
+|-- .github/workflows/marketplace.yml # HACS and hassfest validation
+|-- LICENSE                         # MIT license for project code
 |-- README.md                       # Korean project overview
 |-- tree.md                         # English structure reference
 |-- changelog.jsonl                 # Internal development history
