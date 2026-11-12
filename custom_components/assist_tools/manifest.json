@@ -2,6 +2,7 @@
   "domain": "assist_tools",
   "name": "Assist Tools",
   "after_dependencies": ["recorder"],
+  "categories": ["ai_voice.voice_assistants"],
   "codeowners": ["@plplaaa2"],
   "config_flow": true,
   "dependencies": ["assist_satellite", "http", "llm", "media_player"],
