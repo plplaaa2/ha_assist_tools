@@ -100,7 +100,13 @@ class TimerTool(llm.Tool):
         if self.operation == "status":
             return llm.ToolResult(data={**result, "satellite": endpoint.output.satellite})
         message = None
-        if is_voice and self.operation != "create" and not result.get("skip_announcement", False):
+        # Keep the normal Assist response for Cast output; related: satellite.py and runtime.py.
+        if (
+            is_voice
+            and not getattr(endpoint.output, "google_speaker", False)
+            and self.operation != "create"
+            and not result.get("skip_announcement", False)
+        ):
             duration = duration_text(result["duration_seconds"])
             ending = {
                 "pause": "일시정지하였습니다.",

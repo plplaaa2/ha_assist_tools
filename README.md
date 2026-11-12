@@ -3,7 +3,7 @@
 [🇺🇸 English Version](./README.md) | [🇰🇷 한국어 버전](./README.ko.md)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-![version](https://img.shields.io/badge/version-v0.2.0-blue.svg?style=for-the-badge)
+![version](https://img.shields.io/badge/version-v0.3.0-blue.svg?style=for-the-badge)
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
@@ -41,6 +41,12 @@ When adding Assist Tools, choose **Assist Timer** for a satellite timer or **Ass
 6. The satellite and media player must be able to reach Home Assistant's internal URL. Check the internal URL in Home Assistant network settings.
 
 Ordinary media playback may replace the media currently playing on the selected player. The source MP3 is preserved, and the integration plays a repeated `alarm_60s.mp3`. Playback is limited to 60 seconds, and an automatic stop is also scheduled. The public static URL `/assist_tools/sounds/alarm_60s.mp3` serves only this alarm file.
+
+### Assist + Google Speaker setup
+
+Choose **Assist + Google Speaker** when adding Assist Tools, then select the microphone-only Assist satellite and the Google Cast speaker. Enable **Assist Timer** and **Assist Scheduled Control** in the existing LLM conversation agent.
+
+Timer alarms play on the Google speaker. The satellite can run timer and scheduled control commands without announcement support. For regular Assist replies on the same speaker, forward the URL from ESPHome's `on_tts_end` to Home Assistant's `media_player.play_media`. The Google speaker must be able to reach Home Assistant's internal URL.
 
 ## Contributors
 

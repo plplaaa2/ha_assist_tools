@@ -2,6 +2,14 @@
   "title": "Assist Tools",
   "config": {
     "step": {
+      "google_speaker": {
+        "title": "Assist + Google Speaker",
+        "description": "Choose the microphone-only Assist satellite and the Google Cast speaker that will play timer alarms. Enable Assist Timer and Assist Scheduled Control in your conversation agent.",
+        "data": {
+          "satellite": "Assist satellite",
+          "media_player": "Google Cast speaker"
+        }
+      },
       "weather": {
         "title": "Set up Assist Weather",
         "description": "Choose the Home Assistant weather entity that Assist Weather should query. Enable Assist Weather in your existing LLM conversation agent.",

@@ -58,7 +58,8 @@ class Endpoint:
 
     def queue_announcement(self, message: str, expected_state: str, timer_id: str | None) -> None:
         """Do not interrupt a pipeline or announce an obsolete operation."""
-        if self.closed:
+        # Skip Cast-only endpoints; related: satellite.py and llm.py.
+        if self.closed or getattr(self.output, "google_speaker", False):
             return
         expected_id = None if expected_state == "cancelled" else timer_id
 
