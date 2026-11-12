@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.0] - 2026-11-12
+
+- Added Assist + Google Speaker setup for microphone-only Assist satellites.
+- Play timer alarms on a linked Google Cast speaker and route timer and scheduled control requests from the satellite without requiring satellite announcements.
+
 ## [0.2.0] - 2026-10-27
 
 ### New Features
