@@ -33,7 +33,7 @@ assist_timers/
         |-- history_tools.py        # Read-only Recorder history, chunking and serialization
         |-- weather_tools.py        # Selected weather entity conditions and daily forecast provider
         |-- device_control.py       # Assist exposure, permissions, power capabilities
-        |-- manifest.json           # HA metadata, config flow, version 0.3.0
+        |-- manifest.json           # HA metadata, config flow, version 0.3.1
         |-- runtime.py              # Device routing, deduplication, confirmations
         |-- satellite.py            # Announce speech and normal-media play/stop
         |-- scheduled_actions.py    # Durable delayed device on/off jobs

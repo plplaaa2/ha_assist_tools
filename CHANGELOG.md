@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.3.1] - 2026-11-12
+
+- Added HACS and hassfest validation for the Home Assistant Marketplace catalog submission.
+
 ## [0.3.0] - 2026-11-12
 
 - Added Assist + Google Speaker setup for microphone-only Assist satellites.
