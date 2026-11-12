@@ -16,6 +16,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
+    CONF_GOOGLE_SPEAKER,
     CONF_PLAYER,
     CONF_SATELLITE,
     CONF_WEATHER_ENTITY,
@@ -26,7 +27,10 @@ from .timer_manager import TimerError
 
 
 def schema(
-    defaults: dict | None = None, fields: tuple = (CONF_SATELLITE, CONF_PLAYER)
+    defaults: dict | None = None,
+    fields: tuple = (CONF_SATELLITE, CONF_PLAYER),
+    *,
+    google_speaker: bool = False,
 ) -> probatio.Schema:
     """Use entity selectors for all explicit bindings."""
     defaults = defaults or {}
@@ -34,7 +38,12 @@ def schema(
         {
             probatio.Required(
                 key, **({"default": defaults[key]} if key in defaults else {})
-            ): selector.EntitySelector(selector.EntitySelectorConfig(domain=domain))
+            ): selector.EntitySelector(
+                selector.EntitySelectorConfig(
+                    domain=domain,
+                    **({"integration": "cast"} if google_speaker and key == CONF_PLAYER else {}),
+                )
+            )
             for key, domain in (
                 (CONF_SATELLITE, "assist_satellite"),
                 (CONF_PLAYER, "media_player"),
@@ -85,7 +94,12 @@ def matching_player(hass, satellite_id: str) -> str | None:
 
 def validate(hass, data: dict, entry_id: str | None = None) -> str:
     """Return the device ID after checking capabilities and unique ownership."""
-    validate_entities(hass, data[CONF_SATELLITE], data[CONF_PLAYER])
+    validate_entities(
+        hass,
+        data[CONF_SATELLITE],
+        data[CONF_PLAYER],
+        google_speaker=data.get(CONF_GOOGLE_SPEAKER, False),
+    )
     registry = er.async_get(hass)
     satellite = registry.async_get(data[CONF_SATELLITE])
     if satellite is None or satellite.device_id is None:
@@ -121,6 +135,7 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 options=[
                                     {"value": "timer", "label": "Assist Timer"},
                                     {"value": "weather", "label": "Assist Weather"},
+                                    {"value": "google_speaker", "label": "Assist + Google Speaker"},
                                 ],
                                 mode=SelectSelectorMode.DROPDOWN,
                             )
@@ -132,14 +147,22 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_weather(
                 {key: value for key, value in user_input.items() if key != "setup_type"} or None
             )
+        if user_input.get("setup_type") == "google_speaker":
+            return await self.async_step_google_speaker()
         if "setup_type" in user_input:
             return await self.async_step_satellite()
         return await self.async_step_satellite(user_input)
 
-    async def async_step_satellite(self, user_input=None):
+    async def async_step_google_speaker(self, user_input=None):
+        """Bind a microphone satellite to Cast; related: satellite.py and __init__.py."""
+        return await self.async_step_satellite(user_input, google_speaker=True)
+
+    async def async_step_satellite(self, user_input=None, *, google_speaker=False):
         errors = {}
         if user_input is not None:
             user_input = dict(user_input)
+            if google_speaker:
+                user_input[CONF_GOOGLE_SPEAKER] = True
             if CONF_PLAYER not in user_input:
                 player = matching_player(self.hass, user_input[CONF_SATELLITE])
                 if player is None:
@@ -155,8 +178,11 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._abort_if_unique_id_configured()
                 state = self.hass.states.get(user_input[CONF_SATELLITE])
                 return self.async_create_entry(title=state.name, data=user_input)
+        fields = (CONF_SATELLITE, CONF_PLAYER) if google_speaker else (CONF_SATELLITE,)
         return self.async_show_form(
-            step_id="satellite", data_schema=schema(user_input, (CONF_SATELLITE,)), errors=errors
+            step_id="google_speaker" if google_speaker else "satellite",
+            data_schema=schema(user_input, fields, google_speaker=google_speaker),
+            errors=errors,
         )
 
     async def async_step_player(self, user_input=None):
@@ -170,10 +196,11 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         entry = self._get_reconfigure_entry()
         if CONF_SATELLITE not in entry.data:
             return self.async_abort(reason="unsupported_entry")
+        google_speaker = entry.data.get(CONF_GOOGLE_SPEAKER, False)
         errors = {}
         if user_input is not None:
             try:
-                device_id = validate(self.hass, user_input, entry.entry_id)
+                device_id = validate(self.hass, {**entry.data, **user_input}, entry.entry_id)
                 if device_id != entry.unique_id:
                     raise TimerError("cannot_change_satellite")
                 runtime = self.hass.data.get(DOMAIN)
@@ -185,7 +212,9 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 return self.async_update_reload_and_abort(entry, data_updates=user_input)
         return self.async_show_form(
-            step_id="reconfigure", data_schema=schema(user_input or entry.data), errors=errors
+            step_id="reconfigure",
+            data_schema=schema(user_input or entry.data, google_speaker=google_speaker),
+            errors=errors,
         )
 
     async def async_step_weather(self, user_input=None):

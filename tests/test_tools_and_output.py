@@ -329,7 +329,7 @@ def test_metadata_and_translations_match():
     base = ROOT / "custom_components/assist_tools"
     manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["domain"] == base.name == "assist_tools"
-    assert manifest["version"] == "0.1.0" and manifest["config_flow"] is True
+    assert manifest["version"] == "0.2.0" and manifest["config_flow"] is True
     english = json.loads((base / "strings.json").read_text(encoding="utf-8"))
     korean = json.loads((base / "translations/ko.json").read_text(encoding="utf-8"))
     assert english["config"]["error"].keys() == korean["config"]["error"].keys()
@@ -339,12 +339,16 @@ def test_metadata_and_translations_match():
     assert set(korean["config"]["step"]["player"]["data"]) == {"media_player"}
 
 
-async def test_setup_unload_and_storage_lifecycle(load_module, hass, ha_contract):
+@pytest.mark.parametrize("google_speaker", [False, True])
+async def test_setup_unload_and_storage_lifecycle(load_module, hass, ha_contract, google_speaker):
     setup = load_module("__init__")
     entry = SimpleNamespace(
         entry_id="test-entry",
         data={"satellite": "assist_satellite.kitchen", "media_player": "media_player.kitchen"},
     )
+    if google_speaker:
+        entry.data["google_speaker"] = True
+        hass.state_values["assist_satellite.kitchen"].attributes["supported_features"] = 0
     assert await setup.async_setup(hass, {})
     assert "assist_timers" in ha_contract.apis
     assert ha_contract.apis["assist_timers"].name == "Assist Timer"
@@ -354,6 +358,7 @@ async def test_setup_unload_and_storage_lifecycle(load_module, hass, ha_contract
     assert ha_contract.apis["assist_history"].name == "Assist History"
     assert await setup.async_setup_entry(hass, entry)
     endpoint = hass.data["assist_tools"].endpoints[entry.entry_id]
+    assert hass.data["assist_tools"].for_device("kitchen") is endpoint
     first = await endpoint.manager.async_create(300)
     assert await setup.async_unload_entry(hass, entry)
     assert hass.storage["assist_tools.test-entry"]["timer_id"] == first["timer_id"]
@@ -434,6 +439,34 @@ async def test_setup_flow_auto_connects_or_offers_manual_player(load_module, has
         "media_player": "media_player.kitchen",
     }
     flow.async_set_unique_id.assert_awaited_with("kitchen")
+
+
+async def test_google_speaker_accepts_microphone_only_satellite(load_module, hass):
+    config = load_module("config_flow")
+    flow = config.AssistTimersConfigFlow()
+    flow.hass = hass
+    flow.async_show_form = lambda **kwargs: kwargs
+    flow.async_set_unique_id = AsyncMock()
+    flow._abort_if_unique_id_configured = lambda: None
+    flow.async_create_entry = lambda **kwargs: kwargs
+    hass.state_values["assist_satellite.kitchen"].attributes["supported_features"] = 0
+    selection = {"satellite": "assist_satellite.kitchen", "media_player": "media_player.kitchen"}
+
+    form = await flow.async_step_user({"setup_type": "google_speaker"})
+    assert form["step_id"] == "google_speaker"
+    ordinary = await flow.async_step_satellite(selection)
+    assert ordinary["errors"] == {"base": "announce_not_supported"}
+    entry = await flow.async_step_google_speaker(selection)
+    assert entry["data"] == {**selection, "google_speaker": True}
+    flow.async_set_unique_id.assert_awaited_once_with("kitchen")
+
+    output = load_module("satellite").SatelliteOutput(
+        hass, *selection.values(), google_speaker=True
+    )
+    await output.async_announce("Confirmation", lambda: True)
+    await output.async_play()
+    assert hass.services.async_call.await_count == 1
+    assert hass.services.async_call.await_args.args[:2] == ("media_player", "play_media")
 
 
 @pytest.mark.parametrize(

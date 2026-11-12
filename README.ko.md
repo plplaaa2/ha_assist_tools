@@ -42,6 +42,12 @@ Assist Tools를 추가할 때 **Assist Timer**는 위성 타이머, **Assist Wea
 
 일반 미디어 재생은 선택한 플레이어에서 재생 중인 미디어를 대체할 수 있습니다. 원본 MP3는 보존하고, 이를 반복한 `alarm_60s.mp3`를 재생합니다. 재생은 60초로 제한되며 자동 정지도 예약합니다. 공개 정적 URL `/assist_tools/sounds/alarm_60s.mp3`에서는 이 알람 파일 하나만 제공합니다.
 
+### Assist + Google Speaker 설정
+
+Assist Tools를 추가할 때 **Assist + Google Speaker**를 선택하고 마이크 전용 Assist 위성과 Google Cast 스피커를 연결합니다. 기존 LLM 대화 에이전트에서 **Assist Timer**와 **Assist Scheduled Control**을 활성화하세요.
+
+타이머 만료음은 Google 스피커에서 재생됩니다. 위성의 알림 기능 없이도 타이머와 예약 제어를 사용할 수 있습니다. 일반 Assist 응답을 같은 스피커에서 듣는 경우 ESPHome의 `on_tts_end`에서 받은 URL을 Home Assistant의 `media_player.play_media`에 전달하세요. Google 스피커는 Home Assistant의 내부 URL에 접근할 수 있어야 합니다.
+
 ## 기여자
 
 - [plplaaa2](https://github.com/plplaaa2) — 프로젝트 소유자 및 유지관리자

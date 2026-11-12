@@ -18,6 +18,7 @@ from homeassistant.helpers.typing import ConfigType
 from .const import (
     ALARM_FILE,
     ALARM_URL,
+    CONF_GOOGLE_SPEAKER,
     CONF_PLAYER,
     CONF_SATELLITE,
     CONF_WEATHER_ENTITY,
@@ -90,11 +91,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         return True
     satellite = entry.data[CONF_SATELLITE]
     player = entry.data[CONF_PLAYER]
+    # Share the configured output mode with playback validation; related: config_flow.py, satellite.py.
+    google_speaker = entry.data.get(CONF_GOOGLE_SPEAKER, False)
     registry_entry = er.async_get(hass).async_get(satellite)
     if registry_entry is None or registry_entry.device_id is None:
         raise ConfigEntryNotReady("Satellite must be registered with a device")
     try:
-        validate_entities(hass, satellite, player)
+        validate_entities(hass, satellite, player, google_speaker=google_speaker)
     except TimerError as err:
         raise ConfigEntryNotReady(str(err)) from err
     runtime: Runtime = hass.data[DOMAIN]
@@ -103,7 +106,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if any(ep.output.player == player for ep in runtime.endpoints.values()):
         raise ConfigEntryNotReady("This media player already belongs to another satellite timer")
     store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
-    output = SatelliteOutput(hass, satellite, player)
+    output = SatelliteOutput(hass, satellite, player, google_speaker=google_speaker)
     manager = TimerManager(output, store.async_save)
     endpoint = Endpoint(registry_entry.device_id, manager, output)
     try:

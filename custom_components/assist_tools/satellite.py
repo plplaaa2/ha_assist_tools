@@ -20,15 +20,19 @@ from .timer_manager import TimerError
 _LOGGER = logging.getLogger(__name__)
 
 
-def validate_entities(hass: HomeAssistant, satellite: str, player: str) -> None:
-    """Require announcement, play, and stop capabilities on selected entities."""
+def validate_entities(
+    hass: HomeAssistant, satellite: str, player: str, *, google_speaker: bool = False
+) -> None:
+    """Validate alarm output capabilities; related: config_flow.py and __init__.py."""
     sat = hass.states.get(satellite)
     media = hass.states.get(player)
     if sat is None or not satellite.startswith("assist_satellite."):
         raise TimerError("invalid_satellite")
     if media is None or not player.startswith("media_player."):
         raise TimerError("invalid_player")
-    if not sat.attributes.get("supported_features", 0) & AssistSatelliteEntityFeature.ANNOUNCE:
+    if not google_speaker and not (
+        sat.attributes.get("supported_features", 0) & AssistSatelliteEntityFeature.ANNOUNCE
+    ):
         raise TimerError("announce_not_supported")
     required = MediaPlayerEntityFeature.PLAY_MEDIA | MediaPlayerEntityFeature.STOP
     if media.attributes.get("supported_features", 0) & required != required:
@@ -38,10 +42,14 @@ def validate_entities(hass: HomeAssistant, satellite: str, player: str) -> None:
 class SatelliteOutput:
     """Route control to one satellite and one normal media player."""
 
-    def __init__(self, hass: HomeAssistant, satellite: str, player: str) -> None:
+    def __init__(
+        self, hass: HomeAssistant, satellite: str, player: str, *, google_speaker: bool = False
+    ) -> None:
+        """Configure alarm playback and optional confirmations; related: llm.py."""
         self.hass = hass
         self.satellite = satellite
         self.player = player
+        self.google_speaker = google_speaker
         self._announcement_lock = asyncio.Lock()
 
     async def _call(self, domain: str, service: str, data: dict) -> None:
@@ -50,7 +58,9 @@ class SatelliteOutput:
 
     async def async_play(self) -> None:
         """Play the finite alarm as normal media, never as an announcement."""
-        validate_entities(self.hass, self.satellite, self.player)
+        validate_entities(
+            self.hass, self.satellite, self.player, google_speaker=self.google_speaker
+        )
         state = self.hass.states.get(self.player)
         if state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             raise TimerError("player_unavailable")
@@ -71,6 +81,8 @@ class SatelliteOutput:
 
     async def async_announce(self, message: str, still_valid: Callable[[], bool]) -> None:
         """Wait for the originating pipeline to finish before announcing."""
+        if self.google_speaker:
+            return
         async with self._announcement_lock:
             for _ in range(300):
                 if not still_valid():
