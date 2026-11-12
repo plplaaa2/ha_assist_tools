@@ -3,7 +3,7 @@
 [🇺🇸 English Version](./README.md) | [🇰🇷 한국어 버전](./README.ko.md)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-![version](https://img.shields.io/badge/version-v0.3.0-blue.svg?style=for-the-badge)
+![version](https://img.shields.io/badge/version-v0.3.1-blue.svg?style=for-the-badge)
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
@@ -47,6 +47,10 @@ Assist Tools를 추가할 때 **Assist Timer**는 위성 타이머, **Assist Wea
 Assist Tools를 추가할 때 **Assist + Google Speaker**를 선택하고 마이크 전용 Assist 위성과 Google Cast 스피커를 연결합니다. 기존 LLM 대화 에이전트에서 **Assist Timer**와 **Assist Scheduled Control**을 활성화하세요.
 
 타이머 만료음은 Google 스피커에서 재생됩니다. 위성의 알림 기능 없이도 타이머와 예약 제어를 사용할 수 있습니다. 일반 Assist 응답을 같은 스피커에서 듣는 경우 ESPHome의 `on_tts_end`에서 받은 URL을 Home Assistant의 `media_player.play_media`에 전달하세요. Google 스피커는 Home Assistant의 내부 URL에 접근할 수 있어야 합니다.
+
+## 라이선스
+
+프로젝트 코드는 [MIT 라이선스](LICENSE)를 따릅니다. 동봉된 알람 음원과 반복 재생용 파일에는 [Pixabay 원본 음원](https://pixabay.com/sound-effects/beep-alarm-366507/)의 이용 조건이 적용됩니다.
 
 ## 기여자
 

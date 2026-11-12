@@ -4,6 +4,8 @@
 assist_timers/
 |-- .gitattributes                  # Text and line-ending rules
 |-- .gitignore                      # Local artifacts and secrets exclusions
+|-- .github/workflows/marketplace.yml # HACS and hassfest validation
+|-- LICENSE                         # MIT license for project code
 |-- README.md                       # Korean project overview
 |-- tree.md                         # English structure reference
 |-- changelog.jsonl                 # Internal development history
@@ -33,7 +35,7 @@ assist_timers/
         |-- history_tools.py        # Read-only Recorder history, chunking and serialization
         |-- weather_tools.py        # Selected weather entity conditions and daily forecast provider
         |-- device_control.py       # Assist exposure, permissions, power capabilities
-        |-- manifest.json           # HA metadata, config flow, version 0.3.0
+        |-- manifest.json           # HA metadata, config flow, version 0.3.1
         |-- runtime.py              # Device routing, deduplication, confirmations
         |-- satellite.py            # Announce speech and normal-media play/stop
         |-- scheduled_actions.py    # Durable delayed device on/off jobs
