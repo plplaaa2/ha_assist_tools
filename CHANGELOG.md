@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2] - 2026-11-17
+
+- Load Recorder history time zones asynchronously to avoid blocking Home Assistant's event loop.
+- Keep the automatic alarm stop scheduled when both speaker stop and persistence fail.
+- Publish timer endpoints only after restoration and serialize duplicate ownership checks.
+- Accept hours, minutes, and seconds for timers while preserving total-seconds input.
+- Add the Marketplace voice assistants category and resolve hassfest configuration and checkout warnings.
+
 ## [0.3.1] - 2026-11-12
 
 - Added HACS and hassfest validation for the Home Assistant Marketplace catalog submission.
