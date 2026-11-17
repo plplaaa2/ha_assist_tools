@@ -105,25 +105,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except TimerError as err:
         raise ConfigEntryNotReady(str(err)) from err
     runtime: Runtime = hass.data[DOMAIN]
-    if any(ep.device_id == registry_entry.device_id for ep in runtime.endpoints.values()):
-        raise ConfigEntryNotReady("This satellite device already has a timer configuration")
-    if any(ep.output.player == player for ep in runtime.endpoints.values()):
-        raise ConfigEntryNotReady("This media player already belongs to another satellite timer")
-    store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
-    output = SatelliteOutput(hass, satellite, player, google_speaker=google_speaker)
-    manager = TimerManager(output, store.async_save)
-    endpoint = Endpoint(registry_entry.device_id, manager, output)
-    try:
-        await manager.async_restore(await store.async_load())
-    except Exception as err:
+    # Serialize ownership checks and publish only after restoration; related: runtime.py.
+    async with runtime.actions_lock:
+        if any(ep.device_id == registry_entry.device_id for ep in runtime.endpoints.values()):
+            raise ConfigEntryNotReady("This satellite device already has a timer configuration")
+        if any(ep.output.player == player for ep in runtime.endpoints.values()):
+            raise ConfigEntryNotReady("This media player already belongs to another satellite timer")
+        store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
+        output = SatelliteOutput(hass, satellite, player, google_speaker=google_speaker)
+        manager = TimerManager(output, store.async_save)
+        endpoint = Endpoint(registry_entry.device_id, manager, output)
         try:
-            await endpoint.async_close()
-        except Exception:
-            _LOGGER.exception("Could not stop alarm during failed state restoration")
-        raise ConfigEntryNotReady("Timer state could not be restored") from err
-    runtime.endpoints[entry.entry_id] = endpoint
-    try:
-        async with runtime.actions_lock:
+            await manager.async_restore(await store.async_load())
+        except Exception as err:
+            try:
+                await endpoint.async_close()
+            except Exception:
+                _LOGGER.exception("Could not stop alarm during failed state restoration")
+            raise ConfigEntryNotReady("Timer state could not be restored") from err
+        try:
             if runtime.actions is None:
                 action_store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.scheduled_actions")
                 actions = ScheduledActions(runtime.control.async_execute, action_store.async_save)
@@ -133,10 +133,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     await actions.async_close()
                     raise
                 runtime.actions = actions
-    except Exception as err:
-        runtime.endpoints.pop(entry.entry_id, None)
-        await endpoint.async_close()
-        raise ConfigEntryNotReady("Scheduled action state could not be restored") from err
+        except Exception as err:
+            await endpoint.async_close()
+            raise ConfigEntryNotReady("Scheduled action state could not be restored") from err
+        runtime.endpoints[entry.entry_id] = endpoint
     _LOGGER.info("Assist Tools ready for %s", satellite)
     return True
 

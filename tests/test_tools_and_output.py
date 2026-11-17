@@ -35,6 +35,67 @@ async def endpoints(load_module, hass):
         await endpoint.async_close()
 
 
+@pytest.mark.parametrize(
+    ("args", "duration", "error"),
+    [
+        ({"seconds": 90}, 90, None),
+        ({"minutes": 2, "seconds": 5}, 125, None),
+        ({"hours": 1, "minutes": 20, "seconds": 30}, 4830, None),
+        ({"hours": 168}, 604800, None),
+        ({"hours": 168, "seconds": 1}, None, "invalid_duration"),
+        ({}, None, "invalid_duration"),
+        ({"seconds": 0}, None, "invalid_duration"),
+        ({"duration_seconds": 30, "minutes": 1}, None, "conflicting_duration_fields"),
+    ],
+)
+async def test_timer_duration_fields(endpoints, load_module, hass, ha_contract, args, duration, error):
+    tool = load_module("llm").TimerTool("create")
+    validated = tool.parameters(args)
+    result = await tool.async_call(
+        hass, ha_contract.ToolInput(tool.name, validated), ha_contract.LLMContext("kitchen")
+    )
+    if error:
+        assert result.error and result.data["error"] == error
+        assert endpoints.for_device("kitchen").manager.snapshot()["state"] == "idle"
+    else:
+        assert result.data["duration_seconds"] == duration
+
+
+@pytest.mark.parametrize("restore_fails", [False, True])
+async def test_setup_publishes_only_restored_unique_endpoint(load_module, hass, monkeypatch, restore_fails):
+    setup = load_module("__init__")
+    monkeypatch.setattr(setup, "register_api", lambda _hass: lambda: None)
+    await setup.async_setup(hass, {})
+    runtime = hass.data["assist_tools"]
+    restoring = asyncio.Event()
+    continue_restore = asyncio.Event()
+    attempts = 0
+
+    async def restore(_self, _saved):
+        nonlocal attempts
+        attempts += 1
+        restoring.set()
+        await continue_restore.wait()
+        if restore_fails and attempts == 1:
+            raise OSError("storage unavailable")
+
+    monkeypatch.setattr(setup.ScheduledActions, "async_restore", restore)
+    data = {"satellite": "assist_satellite.kitchen", "media_player": "media_player.kitchen"}
+    first = asyncio.create_task(setup.async_setup_entry(hass, SimpleNamespace(entry_id="a", data=data)))
+    await restoring.wait()
+    second_entry = SimpleNamespace(entry_id="b", data=data)
+    second = asyncio.create_task(setup.async_setup_entry(hass, second_entry))
+    await asyncio.sleep(0)
+    assert not runtime.endpoints and not second.done()
+    continue_restore.set()
+    results = await asyncio.gather(first, second, return_exceptions=True)
+    rejected, accepted = results if restore_fails else results[::-1]
+    assert isinstance(rejected, setup.ConfigEntryNotReady) and accepted is True
+    entry_id = "b" if restore_fails else "a"
+    assert list(runtime.endpoints) == [entry_id]
+    await setup.async_unload_entry(hass, SimpleNamespace(entry_id=entry_id, data=data))
+
+
 async def test_satellites_are_independent(endpoints, load_module):
     kitchen = endpoints.for_device("kitchen")
     bedroom = endpoints.for_device("bedroom")

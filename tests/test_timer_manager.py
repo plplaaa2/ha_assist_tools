@@ -105,14 +105,20 @@ async def test_wrong_id_does_not_touch_alarm(timer):
     await timer.manager.async_close()
 
 
-async def test_failed_stop_retains_ownership_and_can_retry(timer):
+@pytest.mark.parametrize("storage_failure", [False, True])
+async def test_failed_stop_retains_ownership_and_can_retry(timer, storage_failure):
     created = await timer.manager.async_create(1)
     await timer.manager.async_expire(created["timer_id"])
     timer.output.async_stop.side_effect = OSError("offline")
+    original_handle = timer.manager._handle
+    if storage_failure:
+        timer.save.side_effect = OSError("storage unavailable")
     with pytest.raises(timer.core.TimerError, match="alarm_stop_failed"):
         await timer.manager.async_cancel()
     assert timer.manager.snapshot()["state"] == "ringing"
     assert timer.manager.snapshot()["last_error"] == "alarm_stop_failed"
+    assert timer.manager._handle is not None and timer.manager._handle is not original_handle
+    timer.save.side_effect = None
     timer.output.async_stop.side_effect = None
     await timer.manager.async_cancel()
     assert timer.manager.snapshot()["state"] == "idle"
