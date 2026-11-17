@@ -42,18 +42,9 @@ class WeatherTool(llm.Tool):
             )
 
         current: dict[str, Any] = {
-            key: state.attributes.get(key)
-            for key in (
-                "temperature",
-                "apparent_temperature",
-                "humidity",
-                "pressure",
-                "wind_speed",
-                "wind_bearing",
-                "precipitation",
-                "uv_index",
-                "visibility",
-            )
+            key: value
+            for key, value in state.attributes.items()
+            if key not in ("friendly_name", "supported_features")
         }
         current["condition"] = state.state
         try:
