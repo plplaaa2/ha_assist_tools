@@ -7,7 +7,6 @@ import asyncio
 import json
 import logging
 from datetime import UTC, datetime, timedelta
-from zoneinfo import ZoneInfo
 
 import probatio
 from homeassistant.auth.permissions.const import POLICY_READ
@@ -15,6 +14,7 @@ from homeassistant.components.homeassistant import exposed_entities
 from homeassistant.components.recorder.history import get_significant_states
 from homeassistant.helpers import llm
 from homeassistant.helpers.recorder import get_instance
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .timer_manager import TimerError
@@ -172,7 +172,8 @@ class HistoryTool(llm.Tool):
             user_id = getattr(llm_context.context, "user_id", None)
             await authorize(hass, entity_id, user_id)
             start, end = period(args, datetime.now(UTC))
-            zone = ZoneInfo(hass.config.time_zone)
+            # Load time zones off the event loop; related: tests/test_history_tools.py.
+            zone = await dt_util.async_get_time_zone(hass.config.time_zone)
             try:
                 recorder = get_instance(hass)
             except KeyError as err:
@@ -217,7 +218,7 @@ class AssistHistoryAPI(llm.API):
             except TimerError:
                 continue
             targets.append({"entity_id": state.entity_id, "name": state.name})
-        zone = ZoneInfo(self.hass.config.time_zone)
+        zone = await dt_util.async_get_time_zone(self.hass.config.time_zone)
         return llm.APIInstance(
             api=self,
             llm_context=llm_context,

@@ -211,13 +211,17 @@ class TimerManager:
                     await self.output.async_stop()
                 except Exception:
                     timer.last_error = "alarm_stop_failed"
-                    await self._persist()
                     # Retain ownership so another cancel can retry, and keep the
                     # automatic stop attempt even after a failed manual stop.
                     remaining = max(
                         0, (timer.alarm_ends_at or self._wall_clock()) - self._wall_clock()
                     )
                     self._schedule(remaining, timer.timer_id, alarm=True)
+                    # Preserve the stop callback if storage fails; related: tests/test_timer_manager.py.
+                    try:
+                        await self._persist()
+                    except Exception:
+                        _LOGGER.exception("Could not persist alarm stop failure")
                     raise TimerError("alarm_stop_failed") from None
             old = self.timer
             self.timer = None

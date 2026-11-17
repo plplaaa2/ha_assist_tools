@@ -21,7 +21,8 @@ from .timer_manager import TimerError, duration_text
 PROMPT = """Use AssistTimers tools for alarms/countdowns; never built-in timer intents.
 Voice stays on origin satellite. For text without a specified target, ask if multiple
 satellites exist; never guess. Pause/resume preserves remaining time. Cancel/stop
-also stops ringing alarms.
+also stops ringing alarms. For creation, pass hours/minutes/seconds as spoken,
+or duration_seconds alone.
 response_mode=announcement: confirmation is queued on satellite; do not repeat it.
 response_mode=normal: confirm briefly in Korean. Creation has no announcement;
 confirm duration. Explain errors honestly; never claim success on error or retry automatically.
@@ -46,10 +47,15 @@ class TimerTool(llm.Tool):
         }[operation]
         self.parameters = probatio.Schema(
             {
-                probatio.Required(
+                probatio.Optional(
                     "duration_seconds",
                     description="Timer duration in seconds (1 to 604800).",
                 ): probatio.All(int, probatio.Range(min=1, max=MAX_DURATION)),
+                probatio.Optional("hours"): probatio.All(int, probatio.Range(min=0, max=168)),
+                probatio.Optional("minutes"): probatio.All(int, probatio.Range(min=0, max=10080)),
+                probatio.Optional("seconds"): probatio.All(
+                    int, probatio.Range(min=0, max=MAX_DURATION)
+                ),
                 probatio.Optional(
                     "name",
                     default="",
@@ -87,6 +93,17 @@ class TimerTool(llm.Tool):
         runtime = hass.data[DOMAIN]
         try:
             args = dict(tool_input.tool_args)
+            # Normalize spoken duration before deduplication; related: runtime.py, timer_manager.py.
+            if self.operation == "create":
+                units = {"hours": 3600, "minutes": 60, "seconds": 1}
+                if units.keys() & args.keys():
+                    if "duration_seconds" in args:
+                        raise TimerError("conflicting_duration_fields")
+                    args["duration_seconds"] = sum(
+                        args.pop(unit, 0) * factor for unit, factor in units.items()
+                    )
+                if not 1 <= args.get("duration_seconds", 0) <= MAX_DURATION:
+                    raise TimerError("invalid_duration")
             endpoint = runtime.for_request(llm_context.device_id, args.pop("satellite", None))
             is_voice = endpoint.device_id == llm_context.device_id
             # HA can dispatch tool calls concurrently. The manager serializes
