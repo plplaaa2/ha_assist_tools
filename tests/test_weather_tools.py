@@ -14,6 +14,9 @@ async def test_weather_tool_returns_current_state_and_seven_forecast_days(
             "temperature": 12,
             "humidity": 75,
             "pressure": 1008,
+            "FineDust": "27",
+            "FineDustGrade": "좋음",
+            "supported_features": 5,
         },
     )
     hass.state_values["weather.home"] = state
@@ -30,6 +33,8 @@ async def test_weather_tool_returns_current_state_and_seven_forecast_days(
         "temperature": 12,
         "humidity": 75,
         "pressure": 1008,
+        "FineDust": "27",
+        "FineDustGrade": "좋음",
         "condition": "rainy",
     }
     assert len(result.data["forecast_daily"]) == 7
