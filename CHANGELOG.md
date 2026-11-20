@@ -3,6 +3,9 @@
 ## [0.3.3] - 2026-11-20
 
 - Add scheduled opening and closing for supported cover entities, such as curtains and blinds, through Assist and Home Assistant actions.
+- Reschedule pending device actions and repeat them on selected weekdays at a Home Assistant local time. Change the next occurrence or edit the recurring rule.
+- Set one-time and weekly clock alarms with Assist. Alarms ring on the individual speaker bound to the requesting satellite and can be listed, rescheduled, cancelled, or silenced by voice.
+- Choose separate timer completion and clock alarm sounds from Home Assistant's local media in the integration options. Each option defaults to the bundled sound.
 - Include selected weather entity attributes in Assist Weather responses.
 
 ## [0.3.2] - 2026-11-17
