@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.3.3] - 2026-11-20
+
+- Add scheduled opening and closing for supported cover entities, such as curtains and blinds, through Assist and Home Assistant actions.
+- Include selected weather entity attributes in Assist Weather responses.
+
 ## [0.3.2] - 2026-11-17
 
 - Load Recorder history time zones asynchronously to avoid blocking Home Assistant's event loop.
