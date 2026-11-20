@@ -64,5 +64,23 @@
       "reconfigure_successful": "Settings updated.",
       "unsupported_entry": "This configuration is not supported."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Alarm sounds",
+        "description": "Select audio from My media. Clear a selection to use the bundled sound.",
+        "data": {
+          "timer_sound": "Timer completion sound",
+          "alarm_sound": "Clock alarm sound"
+        }
+      }
+    },
+    "error": {
+      "invalid_alarm_sound": "Select a playable audio file from My media."
+    },
+    "abort": {
+      "unsupported_entry": "Sound options are available for entries with a configured satellite and speaker."
+    }
   }
 }

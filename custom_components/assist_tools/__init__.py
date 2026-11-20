@@ -15,8 +15,11 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.util import dt as dt_util
 
+from .action_tools import RESCHEDULE_FIELDS, weekly_fields
 from .const import (
+    ALARM_ACTION,
     ALARM_FILE,
     ALARM_URL,
     CONF_GOOGLE_SPEAKER,
@@ -31,7 +34,7 @@ from .device_control import DeviceControl
 from .llm import register_api
 from .runtime import Endpoint, Runtime
 from .satellite import SatelliteOutput, validate_entities
-from .scheduled_actions import ScheduledActions
+from .scheduled_actions import SCHEDULED_ACTIONS, ScheduledActions
 from .timer_manager import TimerError, TimerManager, duration_text
 from .weather_tools import AssistWeatherAPI
 
@@ -110,9 +113,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if any(ep.device_id == registry_entry.device_id for ep in runtime.endpoints.values()):
             raise ConfigEntryNotReady("This satellite device already has a timer configuration")
         if any(ep.output.player == player for ep in runtime.endpoints.values()):
-            raise ConfigEntryNotReady("This media player already belongs to another satellite timer")
+            raise ConfigEntryNotReady(
+                "This media player already belongs to another satellite timer"
+            )
         store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}")
-        output = SatelliteOutput(hass, satellite, player, google_speaker=google_speaker)
+        output = SatelliteOutput(
+            hass,
+            satellite,
+            player,
+            google_speaker=google_speaker,
+            sounds=lambda: getattr(entry, "options", {}),
+        )
         manager = TimerManager(output, store.async_save)
         endpoint = Endpoint(registry_entry.device_id, manager, output)
         try:
@@ -124,9 +135,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.exception("Could not stop alarm during failed state restoration")
             raise ConfigEntryNotReady("Timer state could not be restored") from err
         try:
+            zone = await dt_util.async_get_time_zone(hass.config.time_zone)
+            if zone is None:
+                raise ConfigEntryNotReady("Home Assistant time zone is unavailable")
+            alarm_store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.alarms")
+            endpoint.alarms = ScheduledActions(
+                endpoint.async_execute_alarm,
+                alarm_store.async_save,
+                zone=zone,
+                allowed_actions=(ALARM_ACTION,),
+            )
+            saved_alarms = await alarm_store.async_load()
+            if isinstance(saved_alarms, list) and any(
+                isinstance(job, dict)
+                and job.get("state") == "executing"
+                and job.get("action") == ALARM_ACTION
+                and job.get("entity_id") == player
+                for job in saved_alarms
+            ):
+                # An interrupted alarm may still be audible. Stop its saved individual output.
+                try:
+                    output.validate_alarm_player(player)
+                    await output.async_stop()
+                except Exception:
+                    _LOGGER.exception("Could not stop interrupted clock alarm on %s", player)
+            await endpoint.alarms.async_restore(saved_alarms)
             if runtime.actions is None:
                 action_store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.scheduled_actions")
-                actions = ScheduledActions(runtime.control.async_execute, action_store.async_save)
+                # Use HA local time for recurring jobs; related: scheduled_actions.py, llm.py.
+                actions = ScheduledActions(
+                    runtime.control.async_execute, action_store.async_save, zone=zone
+                )
                 try:
                     await actions.async_restore(await action_store.async_load())
                 except Exception:
@@ -158,7 +197,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.exception("Could not stop the timer output; unload refused")
             return False
     if endpoint:
-        await endpoint.async_close()
+        try:
+            await endpoint.async_close()
+        except Exception:
+            _LOGGER.exception("Could not stop clock alarm playback; unload refused")
+            return False
     runtime.endpoints.pop(entry.entry_id, None)
     async with runtime.actions_lock:
         if not runtime.endpoints and runtime.actions is not None:
@@ -172,6 +215,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     if entry.data.get(CONF_WEATHER_ENTITY):
         return
     await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}").async_remove()
+    await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.alarms").async_remove()
     if not any(
         other.entry_id != entry.entry_id for other in hass.config_entries.async_entries(DOMAIN)
     ):
@@ -258,7 +302,7 @@ def register_action_services(hass: HomeAssistant, runtime: Runtime) -> None:
         "schedule_action": probatio.Schema(
             {
                 probatio.Required("entity_id"): str,
-                probatio.Required("action"): probatio.In(["turn_on", "turn_off"]),
+                probatio.Required("action"): probatio.In(SCHEDULED_ACTIONS),
                 probatio.Required("delay_seconds"): probatio.All(
                     int, probatio.Range(min=1, max=MAX_DURATION)
                 ),
@@ -266,6 +310,14 @@ def register_action_services(hass: HomeAssistant, runtime: Runtime) -> None:
         ),
         "list_actions": probatio.Schema({}),
         "cancel_action": probatio.Schema({probatio.Required("job_id"): str}),
+        "schedule_weekly_action": probatio.Schema(
+            {
+                probatio.Required("entity_id"): str,
+                probatio.Required("action"): probatio.In(SCHEDULED_ACTIONS),
+                **weekly_fields(required=True),
+            }
+        ),
+        "reschedule_action": probatio.Schema(RESCHEDULE_FIELDS),
     }
     for name, schema in schemas.items():
         hass.services.async_register(

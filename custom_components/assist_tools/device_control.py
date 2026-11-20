@@ -1,4 +1,4 @@
-"""Validate and execute explicit on/off targets; related files: scheduler and LLM.
+"""Validate and execute device actions; related files: scheduled_actions.py, action_tools.py.
 
 Assist exposure and caller permissions are checked both now and at execution.
 No arbitrary service names, scripts, areas, or raw spoken commands are accepted.
@@ -10,16 +10,26 @@ from homeassistant.auth.permissions.const import POLICY_CONTROL
 from homeassistant.components.homeassistant import exposed_entities
 from homeassistant.core import Context
 
-from .scheduled_actions import ScheduledAction
+from .scheduled_actions import COVER_ACTIONS, POWER_ACTIONS, ScheduledAction
 from .timer_manager import TimerError
 
-DEVICE_DOMAINS = {"light", "switch", "fan", "climate", "media_player", "humidifier", "water_heater"}
-# HA 2026.10.1 feature bits from each domain's const.py; zero means base on/off.
-POWER_FEATURES = {
+DEVICE_DOMAINS = {
+    "light",
+    "switch",
+    "fan",
+    "climate",
+    "media_player",
+    "humidifier",
+    "water_heater",
+    "cover",
+}
+# HA feature bits for actions that require an explicit capability.
+ACTION_FEATURES = {
     "fan": {"turn_on": 32, "turn_off": 16},
     "climate": {"turn_on": 256, "turn_off": 128},
     "media_player": {"turn_on": 128, "turn_off": 256},
     "water_heater": {"turn_on": 8, "turn_off": 8},
+    "cover": {"open_cover": 1, "close_cover": 2},
 }
 
 
@@ -32,9 +42,10 @@ class DeviceControl:
     async def validate(
         self, entity_id: str, action: str, user_id: str | None, *, available: bool = True
     ) -> None:
-        if not isinstance(entity_id, str) or entity_id.split(".", 1)[0] not in DEVICE_DOMAINS:
+        domain = entity_id.split(".", 1)[0] if isinstance(entity_id, str) else ""
+        if domain not in DEVICE_DOMAINS:
             raise TimerError("unsupported_device")
-        if action not in ("turn_on", "turn_off"):
+        if action not in (COVER_ACTIONS if domain == "cover" else POWER_ACTIONS):
             raise TimerError("unsupported_device_action")
         state = self.hass.states.get(entity_id)
         if state is None:
@@ -49,9 +60,9 @@ class DeviceControl:
                 or not user.permissions.check_entity(entity_id, POLICY_CONTROL)
             ):
                 raise TimerError("entity_control_not_allowed")
-        if not self.hass.services.has_service(entity_id.split(".", 1)[0], action):
+        if not self.hass.services.has_service(domain, action):
             raise TimerError("device_action_not_supported")
-        required = POWER_FEATURES.get(entity_id.split(".", 1)[0], {}).get(action, 0)
+        required = ACTION_FEATURES.get(domain, {}).get(action, 0)
         if required and not state.attributes.get("supported_features", 0) & required:
             raise TimerError("device_action_not_supported")
         if available and state.state in ("unavailable", "unknown"):
@@ -62,7 +73,8 @@ class DeviceControl:
         for state in self.hass.states.async_all():
             entity_id = state.entity_id
             actions = []
-            for action in ("turn_on", "turn_off"):
+            supported_actions = COVER_ACTIONS if entity_id.startswith("cover.") else POWER_ACTIONS
+            for action in supported_actions:
                 try:
                     await self.validate(entity_id, action, user_id)
                 except TimerError:

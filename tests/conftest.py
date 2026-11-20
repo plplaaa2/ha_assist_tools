@@ -142,13 +142,21 @@ def ha_contract():
         ConfigEntryNotReady=type("ConfigEntryNotReady", (Exception,), {}),
         ServiceValidationError=type("ServiceValidationError", (Exception,), {}),
     )
-    module("homeassistant.config_entries", ConfigEntry=object, ConfigFlow=ConfigFlow)
+    module(
+        "homeassistant.config_entries",
+        ConfigEntry=object,
+        ConfigFlow=ConfigFlow,
+        OptionsFlow=object,
+    )
     module("homeassistant.helpers")
     module("homeassistant.util")
     module("homeassistant.util.dt", async_get_time_zone=AsyncMock(side_effect=ZoneInfo))
-    module("homeassistant.helpers.config_validation", config_entry_only_config_schema=lambda _: dict)
+    module(
+        "homeassistant.helpers.config_validation", config_entry_only_config_schema=lambda _: dict
+    )
     module("homeassistant.helpers.entity_platform", AddEntitiesCallback=object)
     module("homeassistant.helpers.entity_registry", async_get=lambda hass: hass.registry)
+    module("homeassistant.helpers.device_registry", async_get=lambda hass: hass.device_registry)
     module("homeassistant.helpers.storage", Store=Store)
     module("homeassistant.helpers.typing", ConfigType=dict)
     module(
@@ -158,6 +166,8 @@ def ha_contract():
         SelectSelector=lambda config: str,
         SelectSelectorConfig=lambda **kwargs: kwargs,
         SelectSelectorMode=SimpleNamespace(DROPDOWN="dropdown"),
+        MediaSelector=lambda config: dict,
+        MediaSelectorConfig=lambda **kwargs: kwargs,
     )
     module("homeassistant.helpers.network", get_url=lambda hass, **kwargs: "http://ha.test:8123")
     apis = {}
@@ -188,7 +198,18 @@ def ha_contract():
     module(
         "homeassistant.components.assist_satellite", AssistSatelliteEntityFeature=SatelliteFeature
     )
-    module("homeassistant.components.media_player", MediaPlayerEntityFeature=PlayerFeature)
+    module(
+        "homeassistant.components.media_player",
+        MediaPlayerEntityFeature=PlayerFeature,
+        async_process_play_media_url=lambda hass, url: f"http://ha.test:8123{url}",
+    )
+    module(
+        "homeassistant.components.media_source",
+        MediaSourceError=type("MediaSourceError", (Exception,), {}),
+        async_resolve_media=AsyncMock(
+            return_value=SimpleNamespace(url="/media/sound.mp3", mime_type="audio/mpeg")
+        ),
+    )
     module("homeassistant.components.climate", ClimateEntityFeature=ClimateFeature)
     module("homeassistant.components.fan", FanEntityFeature=FanFeature)
     module("homeassistant.components.weather", DOMAIN="weather")
@@ -233,6 +254,7 @@ def hass(ha_contract):
     return SimpleNamespace(
         data={},
         config=SimpleNamespace(time_zone="Asia/Seoul"),
+        device_registry=SimpleNamespace(async_get=lambda _: None),
         states=SimpleNamespace(
             get=states.get,
             async_all=lambda domain=None: [

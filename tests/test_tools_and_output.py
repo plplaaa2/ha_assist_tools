@@ -5,12 +5,184 @@ HA boundaries are contract doubles; real hardware playback requires on-device QA
 
 import asyncio
 import json
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 from conftest import ROOT
 from mutagen.mp3 import MP3
+
+
+# Verify persisted routing through integration setup; related: llm.py, runtime.py.
+async def test_clock_alarm_is_saved_for_the_requesting_speaker(load_module, hass, ha_contract):
+    setup = load_module("__init__")
+    await setup.async_setup(hass, {})
+    for domain in ("assist_satellite", "media_player"):
+        kitchen = hass.state_values[f"{domain}.kitchen"]
+        hass.state_values[f"{domain}.bedroom"] = SimpleNamespace(
+            **{**vars(kitchen), "entity_id": f"{domain}.bedroom", "name": "Bedroom"}
+        )
+    hass.registry_values["assist_satellite.bedroom"] = SimpleNamespace(device_id="bedroom")
+    entries = [
+        SimpleNamespace(
+            entry_id=room,
+            data={"satellite": f"assist_satellite.{room}", "media_player": f"media_player.{room}"},
+        )
+        for room in ("kitchen", "bedroom")
+    ]
+    for entry in entries:
+        await setup.async_setup_entry(hass, entry)
+    try:
+        api = load_module("llm").AssistTimersAPI(hass=hass, id="assist_timers", name="Assist Timer")
+        context = ha_contract.LLMContext("bedroom")
+        instance = await api.async_get_api_instance(context)
+        create = next(tool for tool in instance.tools if tool.name == "AssistAlarmsCreate")
+        args = {"execute_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat()}
+        redirect = await create.async_call(
+            hass,
+            ha_contract.ToolInput(create.name, {**args, "satellite": "assist_satellite.kitchen"}),
+            context,
+        )
+        assert redirect.data["error"] == "cannot_redirect_voice_satellite"
+        unknown = await create.async_call(
+            hass, ha_contract.ToolInput(create.name, args), ha_contract.LLMContext("other")
+        )
+        assert unknown.data["error"] == "requesting_satellite_not_configured"
+        text = await create.async_call(
+            hass, ha_contract.ToolInput(create.name, args), ha_contract.LLMContext(None)
+        )
+        assert text.data["error"] == "target_satellite_required"
+        result = await create.async_call(
+            hass, ha_contract.ToolInput(create.name, create.parameters(args)), context
+        )
+        assert not result.error
+        assert result.data["speaker"] == "media_player.bedroom"
+        job_id = result.data["job_id"]
+        assert "assist_tools.kitchen.alarms" not in hass.storage
+        assert hass.storage["assist_tools.bedroom.alarms"][0]["entity_id"] == "media_player.bedroom"
+        weekly = next(tool for tool in instance.tools if tool.name == "AssistAlarmsCreateWeekly")
+        repeated = await weekly.async_call(
+            hass,
+            ha_contract.ToolInput(
+                weekly.name,
+                weekly.parameters({"weekdays": ["mon", "fri"], "at_time": "07:00"}),
+                id="weekly-clock-alarm",
+            ),
+            context,
+        )
+        assert not repeated.error
+        assert repeated.data["weekdays"] == ["mon", "fri"]
+        assert repeated.data["speaker"] == "media_player.bedroom"
+        await setup.async_unload_entry(hass, entries[1])
+        await setup.async_setup_entry(hass, entries[1])
+        endpoint = hass.data["assist_tools"].for_device("bedroom")
+        assert endpoint.alarms.jobs[job_id].state == "pending"
+        deadline = endpoint.alarms._deadlines[job_id]
+        endpoint.alarms.clock = lambda: deadline
+        ringing = asyncio.Event()
+
+        async def signal(_domain, service, *_args, **_kwargs):
+            if service == "play_media":
+                ringing.set()
+
+        hass.services.async_call.side_effect = signal
+        task = asyncio.create_task(endpoint.alarms.async_execute(job_id))
+        await asyncio.wait_for(ringing.wait(), 1)
+        stop = next(tool for tool in instance.tools if tool.name == "AssistAlarmsStop")
+        stopped = await stop.async_call(hass, ha_contract.ToolInput(stop.name, {}), context)
+        await asyncio.wait_for(task, 1)
+        assert stopped.data["stopped"]
+        assert [call.args[2]["entity_id"] for call in hass.services.async_call.await_args_list] == [
+            "media_player.bedroom",
+            "media_player.bedroom",
+        ]
+    finally:
+        for entry in entries:
+            await setup.async_unload_entry(hass, entry)
+        hass.data["assist_tools"].unregister_api()
+
+
+async def test_clock_alarm_and_timer_sounds_share_output_without_cross_stopping(
+    load_module, hass, monkeypatch
+):
+    satellite = load_module("satellite")
+    defaults = {
+        "timer_sound": {"media_content_id": "media-source://media_source/local/timer.mp3"},
+        "alarm_sound": {"media_content_id": "media-source://media_source/local/alarm.mp3"},
+    }
+
+    async def resolve(_hass, media_id, _player):
+        return SimpleNamespace(url=f"/media/{media_id.rsplit('/', 1)[1]}", mime_type="audio/mpeg")
+
+    monkeypatch.setattr(satellite, "async_resolve_media", resolve)
+    output = satellite.SatelliteOutput(
+        hass, "assist_satellite.kitchen", "media_player.kitchen", sounds=lambda: defaults
+    )
+    await output.async_play()
+    ringing = asyncio.Event()
+
+    async def signal(_domain, service, *_args, **_kwargs):
+        if service == "play_media":
+            ringing.set()
+
+    hass.services.async_call.side_effect = signal
+    task = asyncio.create_task(output.async_ring_alarm("alarm", output.player))
+    await asyncio.wait_for(ringing.wait(), 1)
+    await output.async_stop()
+    assert not await output.async_stop_alarm("another_alarm")
+    assert await output.async_stop_alarm("alarm")
+    await asyncio.wait_for(task, 1)
+    await output.async_stop()
+    calls = [call.args for call in hass.services.async_call.await_args_list]
+    assert [call[1] for call in calls] == ["play_media", "play_media", "media_stop"]
+    assert [call[2]["media_content_id"].rsplit("/", 1)[1] for call in calls[:2]] == [
+        "timer.mp3",
+        "alarm.mp3",
+    ]
+
+
+async def test_clock_alarm_rejects_group_output(load_module, hass):
+    satellite = load_module("satellite")
+    output = satellite.SatelliteOutput(hass, "assist_satellite.kitchen", "media_player.kitchen")
+    hass.state_values[output.player].attributes["group_members"] = [
+        "media_player.kitchen",
+        "media_player.bedroom",
+    ]
+    with pytest.raises(load_module("timer_manager").TimerError, match="individual_speaker"):
+        await output.async_ring_alarm("alarm", output.player)
+    hass.services.async_call.assert_not_awaited()
+
+
+async def test_clock_alarm_auto_stops_with_bundled_sound(load_module, hass, monkeypatch):
+    satellite = load_module("satellite")
+    monkeypatch.setattr(satellite, "ALARM_SECONDS", 0)
+    output = satellite.SatelliteOutput(hass, "assist_satellite.kitchen", "media_player.kitchen")
+    await output.async_ring_alarm("alarm", output.player)
+    calls = [call.args for call in hass.services.async_call.await_args_list]
+    assert [call[1] for call in calls] == ["play_media", "media_stop"]
+    assert calls[0][2]["media_content_id"].endswith("/alarm_60s.mp3")
+    assert not await output.async_stop_alarm()
+
+
+async def test_sound_options_save_independent_local_audio(load_module, hass):
+    config = load_module("config_flow")
+    flow = config.AlarmSoundOptions()
+    flow.hass = hass
+    flow.config_entry = SimpleNamespace(
+        data={"satellite": "assist_satellite.kitchen", "media_player": "media_player.kitchen"},
+        options={"timer_sound": {"media_content_id": "old"}},
+    )
+    flow.async_create_entry = lambda **kwargs: kwargs
+    flow.async_show_form = lambda **kwargs: kwargs
+    flow.add_suggested_values_to_schema = lambda schema, _suggested: schema
+    clock_sound = {"media_content_id": "media-source://media_source/local/bedroom.mp3"}
+    result = await flow.async_step_init({"alarm_sound": clock_sound})
+    assert result["data"] == {"alarm_sound": {**clock_sound, "media_content_type": "audio/mpeg"}}
+    rejected = await flow.async_step_init(
+        {"timer_sound": {"media_content_id": "https://example.com/a.mp3"}}
+    )
+    assert rejected["errors"] == {"timer_sound": "invalid_alarm_sound"}
 
 
 @pytest.fixture
@@ -48,7 +220,9 @@ async def endpoints(load_module, hass):
         ({"duration_seconds": 30, "minutes": 1}, None, "conflicting_duration_fields"),
     ],
 )
-async def test_timer_duration_fields(endpoints, load_module, hass, ha_contract, args, duration, error):
+async def test_timer_duration_fields(
+    endpoints, load_module, hass, ha_contract, args, duration, error
+):
     tool = load_module("llm").TimerTool("create")
     validated = tool.parameters(args)
     result = await tool.async_call(
@@ -62,7 +236,9 @@ async def test_timer_duration_fields(endpoints, load_module, hass, ha_contract, 
 
 
 @pytest.mark.parametrize("restore_fails", [False, True])
-async def test_setup_publishes_only_restored_unique_endpoint(load_module, hass, monkeypatch, restore_fails):
+async def test_setup_publishes_only_restored_unique_endpoint(
+    load_module, hass, monkeypatch, restore_fails
+):
     setup = load_module("__init__")
     monkeypatch.setattr(setup, "register_api", lambda _hass: lambda: None)
     await setup.async_setup(hass, {})
@@ -81,7 +257,9 @@ async def test_setup_publishes_only_restored_unique_endpoint(load_module, hass, 
 
     monkeypatch.setattr(setup.ScheduledActions, "async_restore", restore)
     data = {"satellite": "assist_satellite.kitchen", "media_player": "media_player.kitchen"}
-    first = asyncio.create_task(setup.async_setup_entry(hass, SimpleNamespace(entry_id="a", data=data)))
+    first = asyncio.create_task(
+        setup.async_setup_entry(hass, SimpleNamespace(entry_id="a", data=data))
+    )
     await restoring.wait()
     second_entry = SimpleNamespace(entry_id="b", data=data)
     second = asyncio.create_task(setup.async_setup_entry(hass, second_entry))
@@ -184,8 +362,10 @@ async def test_providers_expose_only_their_own_tools(endpoints, load_module, has
     assert all(tool.name.startswith("AssistTimers") for tool in timer.tools)
     assert {tool.name for tool in devices.tools} == {
         "AssistScheduledControlCreate",
+        "AssistScheduledControlCreateWeekly",
         "AssistScheduledControlList",
         "AssistScheduledControlCancel",
+        "AssistScheduledControlReschedule",
     }
     assert "Available device names" not in timer.api_prompt
     assert "Configured satellite names" not in devices.api_prompt
@@ -390,7 +570,7 @@ def test_metadata_and_translations_match():
     base = ROOT / "custom_components/assist_tools"
     manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["domain"] == base.name == "assist_tools"
-    assert manifest["version"] == "0.3.2" and manifest["config_flow"] is True
+    assert manifest["version"] == "0.3.3" and manifest["config_flow"] is True
     english = json.loads((base / "strings.json").read_text(encoding="utf-8"))
     korean = json.loads((base / "translations/ko.json").read_text(encoding="utf-8"))
     assert english["config"]["error"].keys() == korean["config"]["error"].keys()
@@ -473,10 +653,13 @@ def test_config_validation_ignores_non_timer_entries(load_module, hass):
     hass.config_entries.async_entries = lambda domain: [
         SimpleNamespace(entry_id="weather", data={"weather_entity": "weather.home"})
     ]
-    assert config.validate(
-        hass,
-        {"satellite": "assist_satellite.kitchen", "media_player": "media_player.kitchen"},
-    ) == "kitchen"
+    assert (
+        config.validate(
+            hass,
+            {"satellite": "assist_satellite.kitchen", "media_player": "media_player.kitchen"},
+        )
+        == "kitchen"
+    )
 
 
 @pytest.mark.parametrize("automatic", [True, False])

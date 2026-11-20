@@ -1,9 +1,9 @@
-# Assist Tools
+# HA Assist Tools
 
 [🇺🇸 English Version](./README.md) | [🇰🇷 한국어 버전](./README.ko.md)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-![version](https://img.shields.io/badge/version-v0.3.2-blue.svg?style=for-the-badge)
+![version](https://img.shields.io/badge/version-v0.3.3-blue.svg?style=for-the-badge)
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
@@ -12,6 +12,8 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 ## 기능
 
 - 타이머 설정 및 기기 종료 예약
+- Assist 음성으로 예약을 조회·변경·취소하고, 원하는 요일에 기기 동작을 반복 예약
+- 원하는 시각에 한 번 또는 여러 요일에 반복해서 울리는 알람
 - 냉난방 및 팬 모드 제어
 - 선풍기와 공기청정기의 프리셋, 회전, 방향 설정
 - 기기 상태 이력 조회
@@ -42,9 +44,13 @@ Assist Tools를 추가할 때 **Assist Timer**는 위성 타이머, **Assist Wea
 
 일반 미디어 재생은 선택한 플레이어에서 재생 중인 미디어를 대체할 수 있습니다. 원본 MP3는 보존하고, 이를 반복한 `alarm_60s.mp3`를 재생합니다. 재생은 60초로 제한되며 자동 정지도 예약합니다. 공개 정적 URL `/assist_tools/sounds/alarm_60s.mp3`에서는 이 알람 파일 하나만 제공합니다.
 
+**Assist Timer**에서 “내일 오전 7시에 깨워 줘”, “월·수·금 오전 7시에 알람 맞춰 줘”, “다음 알람을 8시로 바꿔 줘”, “알람 소리 꺼 줘”라고 말할 수 있습니다. 지정 시각 알람은 요청을 받은 Assist에 연결된 개별 스피커에서 울립니다. 텍스트 요청에 스피커 후보가 여러 개면 대상을 지정하세요. Assist Tools 통합의 설정에서 **타이머 종료음**과 **지정 시각 알람음**을 Home Assistant의 **내 미디어**에서 따로 고를 수 있습니다. 항목을 비워 두면 내장음을 사용합니다.
+
 ### Assist + Google Speaker 설정
 
 Assist Tools를 추가할 때 **Assist + Google Speaker**를 선택하고 마이크 전용 Assist 위성과 Google Cast 스피커를 연결합니다. 기존 LLM 대화 에이전트에서 **Assist Timer**와 **Assist Scheduled Control**을 활성화하세요.
+
+**Assist Scheduled Control**에서 “월·수·금 오전 7시에 거실 커튼 열어 줘”, “거실 커튼 예약 알려 줘”, “다음 번만 오전 8시로 옮겨 줘”, “앞으로 수요일은 빼 줘”라고 요청할 수 있습니다. 반복 시각은 Home Assistant 시간대를 따릅니다. 다음 한 번의 실행은 그다음 정규 실행보다 앞선 시각으로 옮길 수 있으며, 반복 예약을 취소하면 이후 실행도 모두 취소됩니다.
 
 타이머 만료음은 Google 스피커에서 재생됩니다. 위성의 알림 기능 없이도 타이머와 예약 제어를 사용할 수 있습니다. 일반 Assist 응답을 같은 스피커에서 듣는 경우 ESPHome의 `on_tts_end`에서 받은 URL을 Home Assistant의 `media_player.play_media`에 전달하세요. Google 스피커는 Home Assistant의 내부 URL에 접근할 수 있어야 합니다.
 

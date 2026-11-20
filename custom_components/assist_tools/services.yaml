@@ -82,16 +82,16 @@ status:
       selector:
         text:
 schedule_action:
-  name: Schedule device on or off
+  name: Schedule device control
   description: Reserve an exposed device action after a delay; does not execute immediately.
   fields:
-    entity_id:
+    entity_id: &scheduled_entity
       name: Device entity
       required: true
       selector:
         entity:
-          domain: [light, switch, fan, climate, media_player, humidifier, water_heater]
-    action:
+          domain: [light, switch, fan, climate, media_player, humidifier, water_heater, cover]
+    action: &scheduled_action
       name: Action
       required: true
       selector:
@@ -101,6 +101,10 @@ schedule_action:
               value: turn_on
             - label: Turn off
               value: turn_off
+            - label: Open cover
+              value: open_cover
+            - label: Close cover
+              value: close_cover
     delay_seconds:
       name: Delay in seconds
       required: true
@@ -119,5 +123,60 @@ cancel_action:
     job_id:
       name: Job ID
       required: true
+      selector:
+        text:
+schedule_weekly_action:
+  name: Schedule weekly device action
+  description: Run a device action on selected weekdays at Home Assistant local time.
+  fields:
+    entity_id: *scheduled_entity
+    action: *scheduled_action
+    weekdays:
+      name: Weekdays
+      required: true
+      selector: &weekday_selector
+        select:
+          multiple: true
+          options:
+            - { label: Monday, value: mon }
+            - { label: Tuesday, value: tue }
+            - { label: Wednesday, value: wed }
+            - { label: Thursday, value: thu }
+            - { label: Friday, value: fri }
+            - { label: Saturday, value: sat }
+            - { label: Sunday, value: sun }
+    at_time:
+      name: Local time (HH:MM)
+      required: true
+      example: "07:00"
+      selector:
+        text:
+reschedule_action:
+  name: Change scheduled device action
+  description: Change the next run with a time or delay, or update a weekly rule.
+  fields:
+    job_id:
+      name: Job ID
+      required: true
+      selector:
+        text:
+    execute_at:
+      name: New date and time (ISO 8601 with offset)
+      example: "2026-11-21T07:00:00+09:00"
+      selector:
+        text:
+    delay_seconds:
+      name: New delay in seconds
+      selector:
+        number:
+          min: 1
+          max: 604800
+          mode: box
+    weekdays:
+      name: New weekdays
+      selector: *weekday_selector
+    at_time:
+      name: New regular local time (HH:MM)
+      example: "08:00"
       selector:
         text:

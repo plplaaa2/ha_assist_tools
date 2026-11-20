@@ -7,7 +7,9 @@ results are cached by call ID so retried calls cannot repeat state changes.
 import asyncio
 import logging
 from collections import OrderedDict
+from datetime import datetime
 
+from .const import ALARM_ACTION
 from .timer_manager import TimerError, TimerManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,6 +22,7 @@ class Endpoint:
         self.device_id = device_id
         self.manager = manager
         self.output = output
+        self.alarms = None
         self._operations = asyncio.Lock()
         self._cache: OrderedDict[str, tuple[tuple, dict]] = OrderedDict()
         self._announcements: set[asyncio.Task] = set()
@@ -84,13 +87,49 @@ class Endpoint:
 
     async def async_close(self) -> None:
         """Drain confirmation tasks before closing the timer owner."""
+        if self.alarms is not None:
+            await self.output.async_close_alarms()
         self.closed = True
         tasks = list(self._announcements)
         for task in tasks:
             task.cancel()
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+        if self.alarms is not None:
+            await self.alarms.async_close()
         await self.manager.async_close()
+
+    # Keep the saved speaker binding for clock alarms; related: scheduled_actions.py, satellite.py.
+    async def async_execute_alarm(self, job) -> None:
+        await self.output.async_ring_alarm(job.job_id, job.entity_id)
+
+    async def async_alarm_operation(
+        self, operation: str, args: dict, user_id: str | None, call_id: str | None
+    ) -> dict:
+        alarms = self.alarms
+        if self.closed or alarms is None or alarms.closed:
+            raise TimerError("alarms_not_ready")
+        if operation in ("create", "create_weekly"):
+            self.output.validate_alarm_player(self.output.player)
+            return await alarms.async_create(
+                self.output.player, ALARM_ACTION, 1, user_id, call_id, **args
+            )
+        if operation == "list":
+            return {
+                "jobs": [alarms.snapshot(job) for job in alarms.jobs.values()],
+                "now_local": datetime.fromtimestamp(alarms.wall_clock(), alarms.zone).isoformat(),
+                "time_zone": str(alarms.zone),
+            }
+        if operation == "stop":
+            return {"stopped": await self.output.async_stop_alarm()}
+        if operation == "cancel":
+            return await alarms.async_cancel(args["job_id"])
+        if operation == "reschedule":
+            job = alarms.jobs.get(args["job_id"])
+            if job is not None:
+                self.output.validate_alarm_player(job.entity_id)
+            return await alarms.async_reschedule(**args)
+        raise TimerError("unknown_alarm_operation")
 
 
 class Runtime:

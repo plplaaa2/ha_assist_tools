@@ -6,7 +6,9 @@ from different satellites stopping each other's playback.
 
 import probatio
 from homeassistant import config_entries
+from homeassistant.components import media_source
 from homeassistant.components.weather import DOMAIN as WEATHER_DOMAIN
+from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import selector
 from homeassistant.helpers.selector import (
@@ -16,9 +18,11 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
+    CONF_ALARM_SOUND,
     CONF_GOOGLE_SPEAKER,
     CONF_PLAYER,
     CONF_SATELLITE,
+    CONF_TIMER_SOUND,
     CONF_WEATHER_ENTITY,
     DOMAIN,
 )
@@ -119,10 +123,68 @@ def validate(hass, data: dict, entry_id: str | None = None) -> str:
     return satellite.device_id
 
 
+# Configure separate local media sounds; related: satellite.py and translations.
+class AlarmSoundOptions(config_entries.OptionsFlow):
+    """Edit sounds for the configured player without reconfiguring its binding."""
+
+    async def async_step_init(self, user_input=None):
+        if CONF_SATELLITE not in self.config_entry.data:
+            return self.async_abort(reason="unsupported_entry")
+        errors = {}
+        options = dict(self.config_entry.options)
+        fields = (CONF_TIMER_SOUND, CONF_ALARM_SOUND)
+        if user_input is not None:
+            for field in fields:
+                sound = user_input.get(field)
+                if not sound:
+                    options.pop(field, None)
+                    continue
+                content_id = sound.get("media_content_id", "")
+                if not content_id.startswith("media-source://media_source/"):
+                    errors[field] = "invalid_alarm_sound"
+                    continue
+                try:
+                    media = await media_source.async_resolve_media(
+                        self.hass, content_id, self.config_entry.data[CONF_PLAYER]
+                    )
+                except media_source.MediaSourceError:
+                    errors[field] = "invalid_alarm_sound"
+                    continue
+                if not media.mime_type.startswith("audio/"):
+                    errors[field] = "invalid_alarm_sound"
+                    continue
+                options[field] = {
+                    "media_content_id": content_id,
+                    "media_content_type": media.mime_type,
+                }
+            if not errors:
+                return self.async_create_entry(title="", data=options)
+        schema = probatio.Schema(
+            {
+                probatio.Optional(field): selector.MediaSelector(
+                    selector.MediaSelectorConfig(accept=["audio/*"])
+                )
+                for field in fields
+            }
+        )
+        return self.async_show_form(
+            step_id="init",
+            data_schema=self.add_suggested_values_to_schema(
+                schema, self.config_entry.options if user_input is None else user_input
+            ),
+            errors=errors,
+        )
+
+
 class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Configure a satellite timer or a selected weather provider."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        return AlarmSoundOptions()
 
     async def async_step_user(self, user_input=None):
         if user_input is None:
