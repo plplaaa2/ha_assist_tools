@@ -5,8 +5,10 @@ All device actions use mocks. No physical light, fan, heater, or network is used
 
 import asyncio
 from dataclasses import asdict
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from zoneinfo import ZoneInfo
 
 import pytest
 import yaml
@@ -43,6 +45,120 @@ async def test_due_job_runs_once(scheduler):
     await scheduler.manager.async_execute(job["job_id"])
     scheduler.execute.assert_awaited_once()
     assert scheduler.manager.jobs[job["job_id"]].state == "completed"
+
+
+# Cover changes and recurrence in local time; related: scheduled_actions.py, action_tools.py.
+async def test_reschedule_rolls_back_on_storage_failure(scheduler):
+    manager = scheduler.manager
+    job = await manager.async_create("light.room", "turn_on", 30)
+    job_id = job["job_id"]
+    scheduler.save.side_effect = OSError("disk full")
+    with pytest.raises(OSError):
+        await manager.async_reschedule(job_id, delay_seconds=60)
+    assert manager.snapshot(manager.jobs[job_id]) == job
+    scheduler.save.side_effect = None
+    changed = await manager.async_reschedule(job_id, delay_seconds=60)
+    assert changed["job_id"] == job_id
+    scheduler.clock.mono += 30
+    await manager.async_execute(job_id)
+    scheduler.execute.assert_not_awaited()
+    scheduler.clock.mono += 30
+    await manager.async_execute(job_id)
+    scheduler.execute.assert_awaited_once()
+
+
+async def test_weekly_assist_override_preserves_remaining_weekdays(
+    device, scheduler, load_module, hass, ha_contract
+):
+    manager = scheduler.manager
+    manager.zone = ZoneInfo("Asia/Seoul")
+
+    def set_time(value):
+        stamp = datetime.fromisoformat(value).timestamp()
+        scheduler.clock.mono += stamp - scheduler.clock.wall
+        scheduler.clock.wall = stamp
+
+    set_time("2026-11-23T06:00:00+09:00")
+    runtime = load_module("runtime").Runtime()
+    runtime.actions, runtime.control = manager, device
+    hass.data["assist_tools"] = runtime
+    tools = load_module("action_tools")
+
+    async def call(operation, args, entities=None):
+        tool = tools.ActionTool(operation, entities)
+        result = await tool.async_call(
+            hass,
+            ha_contract.ToolInput(tool.name, tool.parameters(args)),
+            ha_contract.LLMContext(None),
+        )
+        assert not result.error, result.data
+        return result.data
+
+    created = await call(
+        "schedule_weekly_action",
+        {
+            "entity_id": "light.room",
+            "action": "turn_on",
+            "weekdays": ["fri", "wed", "mon"],
+            "at_time": "07:00",
+        },
+        ["light.room"],
+    )
+    job_id = created["job_id"]
+    assert created["weekdays"] == ["mon", "wed", "fri"]
+    assert created["execute_at_local"] == "2026-11-23T07:00:00+09:00"
+    changed = await call(
+        "reschedule_action", {"job_id": job_id, "execute_at": "2026-11-23T06:30:00+09:00"}
+    )
+    assert changed["next_execution_overridden"]
+    set_time("2026-11-23T06:30:00+09:00")
+    await manager.async_execute(job_id)
+    scheduler.execute.assert_awaited_once()
+    listed = (await call("list_actions", {}))["jobs"][0]
+    assert listed["execute_at_local"] == "2026-11-25T07:00:00+09:00"
+    assert not listed["next_execution_overridden"]
+    updated = await call("reschedule_action", {"job_id": job_id, "weekdays": ["mon", "fri"]})
+    assert updated["weekdays"] == ["mon", "fri"]
+    assert updated["execute_at_local"] == "2026-11-27T07:00:00+09:00"
+    assert (await call("cancel_action", {"job_id": job_id}))["state"] == "cancelled"
+
+
+async def test_weekly_restore_skips_missed_and_interrupted_occurrences(scheduler):
+    scheduler.manager.zone = ZoneInfo("Asia/Seoul")
+    scheduler.clock.wall = datetime.fromisoformat("2026-11-23T06:00:00+09:00").timestamp()
+    job = await scheduler.manager.async_create(
+        "light.room", "turn_on", 1, weekdays=["mon", "wed", "fri"], at_time="07:00"
+    )
+    saved = asdict(scheduler.manager.jobs[job["job_id"]])
+    await scheduler.manager.async_close()
+    scheduler.clock.wall += 7200
+    restored = scheduler.module.ScheduledActions(
+        scheduler.execute,
+        scheduler.save,
+        wall_clock=lambda: scheduler.clock.wall,
+        clock=lambda: scheduler.clock.mono,
+        zone=scheduler.manager.zone,
+    )
+    try:
+        await restored.async_restore(
+            [saved, {**saved, "job_id": "uncertain", "state": "executing"}]
+        )
+        for restored_job in restored.jobs.values():
+            snapshot = restored.snapshot(restored_job)
+            assert snapshot["state"] == "pending"
+            assert snapshot["execute_at_local"] == "2026-11-25T07:00:00+09:00"
+        scheduler.execute.assert_not_awaited()
+    finally:
+        await restored.async_close()
+
+
+async def test_weekly_skips_nonexistent_local_time(scheduler):
+    scheduler.manager.zone = ZoneInfo("America/New_York")
+    scheduler.clock.wall = datetime.fromisoformat("2026-03-07T12:00:00-05:00").timestamp()
+    job = await scheduler.manager.async_create(
+        "light.room", "turn_on", 1, weekdays=["sun"], at_time="02:30"
+    )
+    assert job["execute_at_local"] == "2026-03-15T02:30:00-04:00"
 
 
 async def test_cancel_before_due_blocks_stale_callback(scheduler):
@@ -301,8 +417,10 @@ async def test_scheduler_independent_from_alarm_timer(
     instance = await api.async_get_api_instance(ha_contract.LLMContext(None))
     assert {t.name for t in instance.tools} == {
         "AssistScheduledControlCreate",
+        "AssistScheduledControlCreateWeekly",
         "AssistScheduledControlList",
         "AssistScheduledControlCancel",
+        "AssistScheduledControlReschedule",
     }
     timer_api = load_module("llm").AssistTimersAPI(
         hass=hass, id="assist_timers", name="Assist Timer"
@@ -358,6 +476,47 @@ async def test_action_services_schedule_list_and_cancel(device, scheduler, load_
     assert listed["jobs"][0]["job_id"] == result["job_id"]
     cancelled = await handlers["cancel_action"](call("cancel_action", {"job_id": result["job_id"]}))
     assert cancelled["state"] == "cancelled"
+    hass.services.async_call.assert_not_awaited()
+
+
+async def test_weekly_action_services_create_and_update_rule(device, scheduler, load_module, hass):
+    runtime = load_module("runtime").Runtime()
+    runtime.actions, runtime.control = scheduler.manager, device
+    handlers = {}
+    hass.services.async_register = lambda domain, name, handler, **kwargs: handlers.update(
+        {name: (handler, kwargs["schema"])}
+    )
+    load_module("__init__").register_action_services(hass, runtime)
+
+    async def call(service, args):
+        handler, schema = handlers[service]
+        return await handler(
+            SimpleNamespace(
+                service=service,
+                data=schema(args),
+                context=SimpleNamespace(user_id="user"),
+                return_response=True,
+            )
+        )
+
+    created = await call(
+        "schedule_weekly_action",
+        {
+            "entity_id": "light.room",
+            "action": "turn_off",
+            "weekdays": ["mon", "wed"],
+            "at_time": "07:00",
+        },
+    )
+    changed = await call(
+        "reschedule_action", {"job_id": created["job_id"], "weekdays": ["fri"], "at_time": "08:00"}
+    )
+    assert changed["job_id"] == created["job_id"]
+    assert changed["weekdays"] == ["fri"]
+    assert changed["at_time"] == "08:00"
+    hass.auth.async_get_user.return_value.permissions.check_entity = lambda *args: False
+    with pytest.raises(Exception, match="entity_control_not_allowed"):
+        await call("reschedule_action", {"job_id": created["job_id"], "at_time": "09:00"})
     hass.services.async_call.assert_not_awaited()
 
 

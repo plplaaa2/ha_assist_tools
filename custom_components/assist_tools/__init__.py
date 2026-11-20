@@ -15,7 +15,9 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.util import dt as dt_util
 
+from .action_tools import RESCHEDULE_FIELDS, weekly_fields
 from .const import (
     ALARM_FILE,
     ALARM_URL,
@@ -126,7 +128,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             if runtime.actions is None:
                 action_store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.scheduled_actions")
-                actions = ScheduledActions(runtime.control.async_execute, action_store.async_save)
+                # Use HA local time for recurring jobs; related: scheduled_actions.py, llm.py.
+                zone = await dt_util.async_get_time_zone(hass.config.time_zone)
+                if zone is None:
+                    raise ConfigEntryNotReady("Home Assistant time zone is unavailable")
+                actions = ScheduledActions(
+                    runtime.control.async_execute, action_store.async_save, zone=zone
+                )
                 try:
                     await actions.async_restore(await action_store.async_load())
                 except Exception:
@@ -266,6 +274,14 @@ def register_action_services(hass: HomeAssistant, runtime: Runtime) -> None:
         ),
         "list_actions": probatio.Schema({}),
         "cancel_action": probatio.Schema({probatio.Required("job_id"): str}),
+        "schedule_weekly_action": probatio.Schema(
+            {
+                probatio.Required("entity_id"): str,
+                probatio.Required("action"): probatio.In(SCHEDULED_ACTIONS),
+                **weekly_fields(required=True),
+            }
+        ),
+        "reschedule_action": probatio.Schema(RESCHEDULE_FIELDS),
     }
     for name, schema in schemas.items():
         hass.services.async_register(

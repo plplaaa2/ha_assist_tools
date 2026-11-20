@@ -184,8 +184,10 @@ async def test_providers_expose_only_their_own_tools(endpoints, load_module, has
     assert all(tool.name.startswith("AssistTimers") for tool in timer.tools)
     assert {tool.name for tool in devices.tools} == {
         "AssistScheduledControlCreate",
+        "AssistScheduledControlCreateWeekly",
         "AssistScheduledControlList",
         "AssistScheduledControlCancel",
+        "AssistScheduledControlReschedule",
     }
     assert "Available device names" not in timer.api_prompt
     assert "Configured satellite names" not in devices.api_prompt

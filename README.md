@@ -12,6 +12,7 @@ A Home Assistant HACS custom integration that provides Assist timers, scheduled 
 ## Features
 
 - Set timers and schedule device shutdowns
+- List, reschedule, or cancel device jobs by voice, and repeat device actions on selected weekdays
 - Control climate and fan modes
 - Set fan and air purifier presets, oscillation, and direction
 - View device state history
@@ -45,6 +46,8 @@ Ordinary media playback may replace the media currently playing on the selected 
 ### Assist + Google Speaker setup
 
 Choose **Assist + Google Speaker** when adding Assist Tools, then select the microphone-only Assist satellite and the Google Cast speaker. Enable **Assist Timer** and **Assist Scheduled Control** in the existing LLM conversation agent.
+
+With **Assist Scheduled Control**, ask Assist to open the living room curtains at 7 AM on Mondays, Wednesdays, and Fridays, list curtain schedules, move the next run to 8 AM, or remove Wednesdays from the recurring schedule. Weekly rules use Home Assistant local time. A next-run override must precede the following regular run. Cancelling a weekly schedule cancels the series.
 
 Timer alarms play on the Google speaker. The satellite can run timer and scheduled control commands without announcement support. For regular Assist replies on the same speaker, forward the URL from ESPHome's `on_tts_end` to Home Assistant's `media_player.play_media`. The Google speaker must be able to reach Home Assistant's internal URL.
 

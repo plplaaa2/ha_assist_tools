@@ -12,6 +12,7 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 ## 기능
 
 - 타이머 설정 및 기기 종료 예약
+- Assist 음성으로 예약을 조회·변경·취소하고, 원하는 요일에 기기 동작을 반복 예약
 - 냉난방 및 팬 모드 제어
 - 선풍기와 공기청정기의 프리셋, 회전, 방향 설정
 - 기기 상태 이력 조회
@@ -45,6 +46,8 @@ Assist Tools를 추가할 때 **Assist Timer**는 위성 타이머, **Assist Wea
 ### Assist + Google Speaker 설정
 
 Assist Tools를 추가할 때 **Assist + Google Speaker**를 선택하고 마이크 전용 Assist 위성과 Google Cast 스피커를 연결합니다. 기존 LLM 대화 에이전트에서 **Assist Timer**와 **Assist Scheduled Control**을 활성화하세요.
+
+**Assist Scheduled Control**에서 “월·수·금 오전 7시에 거실 커튼 열어 줘”, “거실 커튼 예약 알려 줘”, “다음 번만 오전 8시로 옮겨 줘”, “앞으로 수요일은 빼 줘”라고 요청할 수 있습니다. 반복 시각은 Home Assistant 시간대를 따릅니다. 다음 한 번의 실행은 그다음 정규 실행보다 앞선 시각으로 옮길 수 있으며, 반복 예약을 취소하면 이후 실행도 모두 취소됩니다.
 
 타이머 만료음은 Google 스피커에서 재생됩니다. 위성의 알림 기능 없이도 타이머와 예약 제어를 사용할 수 있습니다. 일반 Assist 응답을 같은 스피커에서 듣는 경우 ESPHome의 `on_tts_end`에서 받은 URL을 Home Assistant의 `media_player.play_media`에 전달하세요. Google 스피커는 Home Assistant의 내부 URL에 접근할 수 있어야 합니다.
 
