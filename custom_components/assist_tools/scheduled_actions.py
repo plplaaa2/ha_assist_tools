@@ -1,4 +1,4 @@
-"""Persist delayed on/off jobs; related files: device_control, setup, and LLM.
+"""Persist delayed device jobs; related files: device_control.py, __init__.py, action_tools.py.
 
 The scheduler stores resolved targets, never natural-language commands. It marks
 an execution durably before calling the device and never retries uncertain jobs.
@@ -17,6 +17,10 @@ from .timer_manager import TimerError
 
 _LOGGER = logging.getLogger(__name__)
 TERMINAL = {"completed", "cancelled", "expired", "failed", "interrupted"}
+# Share action names across persistence and schemas; related: device_control.py, services.yaml.
+POWER_ACTIONS = ("turn_on", "turn_off")
+COVER_ACTIONS = ("open_cover", "close_cover")
+SCHEDULED_ACTIONS = POWER_ACTIONS + COVER_ACTIONS
 
 
 @dataclass
@@ -103,7 +107,7 @@ class ScheduledActions:
         call_id: str | None = None,
     ) -> dict:
         """Save before scheduling and deduplicate repeated tool calls."""
-        if action not in ("turn_on", "turn_off"):
+        if action not in SCHEDULED_ACTIONS:
             raise TimerError("unsupported_device_action")
         if type(delay_seconds) is not int or not 1 <= delay_seconds <= MAX_DURATION:
             raise TimerError("delay_out_of_range")
@@ -222,7 +226,7 @@ class ScheduledActions:
                     or job.job_id in self.jobs
                     or not isinstance(job.entity_id, str)
                     or "." not in job.entity_id
-                    or job.action not in ("turn_on", "turn_off")
+                    or job.action not in SCHEDULED_ACTIONS
                     or type(job.delay_seconds) is not int
                     or not 1 <= job.delay_seconds <= MAX_DURATION
                     or not isinstance(job.execute_at, (int, float))

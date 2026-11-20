@@ -82,7 +82,7 @@ status:
       selector:
         text:
 schedule_action:
-  name: Schedule device on or off
+  name: Schedule device control
   description: Reserve an exposed device action after a delay; does not execute immediately.
   fields:
     entity_id:
@@ -90,7 +90,7 @@ schedule_action:
       required: true
       selector:
         entity:
-          domain: [light, switch, fan, climate, media_player, humidifier, water_heater]
+          domain: [light, switch, fan, climate, media_player, humidifier, water_heater, cover]
     action:
       name: Action
       required: true
@@ -101,6 +101,10 @@ schedule_action:
               value: turn_on
             - label: Turn off
               value: turn_off
+            - label: Open cover
+              value: open_cover
+            - label: Close cover
+              value: close_cover
     delay_seconds:
       name: Delay in seconds
       required: true

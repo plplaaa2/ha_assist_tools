@@ -31,7 +31,7 @@ from .device_control import DeviceControl
 from .llm import register_api
 from .runtime import Endpoint, Runtime
 from .satellite import SatelliteOutput, validate_entities
-from .scheduled_actions import ScheduledActions
+from .scheduled_actions import SCHEDULED_ACTIONS, ScheduledActions
 from .timer_manager import TimerError, TimerManager, duration_text
 from .weather_tools import AssistWeatherAPI
 
@@ -258,7 +258,7 @@ def register_action_services(hass: HomeAssistant, runtime: Runtime) -> None:
         "schedule_action": probatio.Schema(
             {
                 probatio.Required("entity_id"): str,
-                probatio.Required("action"): probatio.In(["turn_on", "turn_off"]),
+                probatio.Required("action"): probatio.In(SCHEDULED_ACTIONS),
                 probatio.Required("delay_seconds"): probatio.All(
                     int, probatio.Range(min=1, max=MAX_DURATION)
                 ),

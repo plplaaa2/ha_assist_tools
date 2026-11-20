@@ -8,11 +8,13 @@ import probatio
 from homeassistant.helpers import llm
 
 from .const import DOMAIN, MAX_DURATION
+from .scheduled_actions import SCHEDULED_ACTIONS
 from .timer_manager import TimerError
 
-# 프롬프트 간소화 및 예약/취소 지침 유지; 연결 파일: llm.py, test_scheduled_actions.py
-ACTION_PROMPT = """For delayed on/off control, use AssistScheduledControl tools; never alarm timers.
-Ask if target is ambiguous. Separate on/off times require separate jobs.
+# Guide delayed device and cover control; related: llm.py, test_scheduled_actions.py.
+ACTION_PROMPT = """For delayed device control, use AssistScheduledControl tools; never alarm timers.
+Use open_cover or close_cover for covers. Choose from the target's listed actions.
+Ask if target is ambiguous. Separate action times require separate jobs.
 Alarm cancellation does not cancel device jobs. Confirm reservations or
 cancellations in Korean, not that the device already changed state.
 Never replay uncertain execution or claim success on error.
@@ -55,7 +57,7 @@ class ActionTool(llm.Tool):
         self.name = f"AssistScheduledControl{suffix}"
         self.title = f"Scheduled device control: {suffix}"
         self.description = {
-            "schedule_action": "Schedule turning one exposed device on or off after a delay; do not execute now.",
+            "schedule_action": "Schedule a supported action for one exposed device after a delay, including opening or closing a cover.",
             "list_actions": "List scheduled device controls and their job IDs, including pending reservations and completed, cancelled or failed outcomes; not alarm timers.",
             "cancel_action": "Cancel a pending scheduled device control by its exact job_id; do not cancel alarm timers or undo device actions that already started.",
         }[operation]
@@ -68,8 +70,8 @@ class ActionTool(llm.Tool):
                 ): probatio.In(entities or []),
                 probatio.Required(
                     "action",
-                    description="Device operation to execute after the delay: turn_on or turn_off.",
-                ): probatio.In(["turn_on", "turn_off"]),
+                    description="A listed action for the target: turn_on, turn_off, open_cover, or close_cover.",
+                ): probatio.In(SCHEDULED_ACTIONS),
                 probatio.Required(
                     "delay_seconds",
                     description="Delay from now in seconds, from 1 to 604800; never execute immediately.",

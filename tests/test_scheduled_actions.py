@@ -206,6 +206,78 @@ async def test_media_player_requires_actual_power_feature(device, hass):
         await device.validate("media_player.kitchen", "turn_on", None)
 
 
+# Exercise stored cover commands through both entry points; related: action_tools.py, __init__.py.
+@pytest.mark.parametrize(("action", "features"), [("open_cover", 1), ("close_cover", 2)])
+async def test_cover_schedule_and_restore(
+    device, scheduler, load_module, hass, ha_contract, action, features
+):
+    entity_id = "cover.curtain"
+    hass.state_values[entity_id] = SimpleNamespace(
+        entity_id=entity_id,
+        name="Curtain",
+        state="closed",
+        attributes={"supported_features": features},
+    )
+    hass.exposed.add(entity_id)
+    targets = await device.targets(None)
+    assert next(target for target in targets if target["entity_id"] == entity_id)["actions"] == [
+        action
+    ]
+
+    runtime = load_module("runtime").Runtime()
+    runtime.actions, runtime.control = scheduler.manager, device
+    hass.data["assist_tools"] = runtime
+    args = {"entity_id": entity_id, "action": action, "delay_seconds": 30}
+    if action == "open_cover":
+        tool = load_module("action_tools").ActionTool("schedule_action", [entity_id])
+        result = await tool.async_call(
+            hass,
+            ha_contract.ToolInput(tool.name, tool.parameters(args)),
+            ha_contract.LLMContext(None),
+        )
+        assert not result.error
+        job = result.data
+    else:
+        handlers = {}
+        hass.services.async_register = lambda domain, name, handler, **kwargs: handlers.update(
+            {name: (handler, kwargs["schema"])}
+        )
+        load_module("__init__").register_action_services(hass, runtime)
+        handler, schema = handlers["schedule_action"]
+        job = await handler(
+            SimpleNamespace(
+                service="schedule_action",
+                data=schema(args),
+                context=SimpleNamespace(user_id=None),
+                return_response=True,
+            )
+        )
+
+    assert job["state"] == "pending"
+    hass.services.async_call.assert_not_awaited()
+    record = asdict(scheduler.manager.jobs[job["job_id"]])
+    await scheduler.manager.async_close()
+    restored = scheduler.module.ScheduledActions(
+        device.async_execute,
+        scheduler.save,
+        wall_clock=lambda: scheduler.clock.wall,
+        clock=lambda: scheduler.clock.mono,
+    )
+    try:
+        await restored.async_restore([record])
+        scheduler.clock.mono += 30
+        await restored.async_execute(job["job_id"])
+        assert restored.jobs[job["job_id"]].state == "completed"
+        hass.services.async_call.assert_awaited_once()
+        assert hass.services.async_call.await_args.args == (
+            "cover",
+            action,
+            {"entity_id": entity_id},
+        )
+    finally:
+        await restored.async_close()
+
+
 async def test_scheduler_independent_from_alarm_timer(
     device, scheduler, load_module, hass, ha_contract
 ):
