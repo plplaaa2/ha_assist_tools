@@ -13,6 +13,7 @@ A Home Assistant HACS custom integration that provides Assist timers, scheduled 
 
 - Set timers and schedule device shutdowns
 - List, reschedule, or cancel device jobs by voice, and repeat device actions on selected weekdays
+- Set one-time or weekly clock alarms on the requesting satellite's speaker
 - Control climate and fan modes
 - Set fan and air purifier presets, oscillation, and direction
 - View device state history
@@ -42,6 +43,8 @@ When adding Assist Tools, choose **Assist Timer** for a satellite timer or **Ass
 6. The satellite and media player must be able to reach Home Assistant's internal URL. Check the internal URL in Home Assistant network settings.
 
 Ordinary media playback may replace the media currently playing on the selected player. The source MP3 is preserved, and the integration plays a repeated `alarm_60s.mp3`. Playback is limited to 60 seconds, and an automatic stop is also scheduled. The public static URL `/assist_tools/sounds/alarm_60s.mp3` serves only this alarm file.
+
+With **Assist Timer**, ask for a clock alarm tomorrow at 7 AM or on selected weekdays. You can also list, reschedule, cancel, or silence alarms by voice. Clock alarms ring on the individual speaker bound to the requesting satellite. For text requests with multiple configured speakers, specify the speaker. In the Assist Tools integration options, choose separate completion and clock alarm sounds from **My media** or leave either field clear to use the bundled sound.
 
 ### Assist + Google Speaker setup
 

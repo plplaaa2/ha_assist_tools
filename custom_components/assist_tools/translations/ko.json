@@ -64,5 +64,23 @@
       "reconfigure_successful": "설정을 변경했습니다.",
       "unsupported_entry": "지원하지 않는 설정입니다."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "알림음 설정",
+        "description": "내 미디어에서 오디오를 선택하세요. 항목을 비우면 기본 내장음이 재생됩니다.",
+        "data": {
+          "timer_sound": "타이머 종료음",
+          "alarm_sound": "지정 시각 알람음"
+        }
+      }
+    },
+    "error": {
+      "invalid_alarm_sound": "내 미디어에서 재생할 수 있는 오디오 파일을 선택하세요."
+    },
+    "abort": {
+      "unsupported_entry": "Assist 위성과 스피커를 연결한 설정에서 알림음을 변경할 수 있습니다."
+    }
   }
 }

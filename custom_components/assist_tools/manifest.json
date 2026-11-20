@@ -5,7 +5,7 @@
   "categories": ["ai_voice.voice_assistants"],
   "codeowners": ["@plplaaa2"],
   "config_flow": true,
-  "dependencies": ["assist_satellite", "http", "llm", "media_player"],
+  "dependencies": ["assist_satellite", "http", "llm", "media_player", "media_source"],
   "documentation": "https://github.com/plplaaa2/ha_assist_tools",
   "integration_type": "service",
   "iot_class": "calculated",

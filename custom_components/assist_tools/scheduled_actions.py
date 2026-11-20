@@ -43,6 +43,20 @@ def weekly_rule(weekdays, at_time: str) -> tuple[list[str], str]:
     return [day for day in WEEKDAYS if day in weekdays], at_time
 
 
+def future_timestamp(value: str, now: float, zone: tzinfo) -> float:
+    try:
+        parsed = datetime.fromisoformat(value)
+        if parsed.tzinfo is None:
+            raise ValueError
+        stamp = parsed.timestamp()
+        datetime.fromtimestamp(stamp, zone)
+        if stamp <= now:
+            raise ValueError
+    except (TypeError, ValueError, OverflowError, OSError) as err:
+        raise TimerError("invalid_execution_time") from err
+    return stamp
+
+
 @dataclass
 class ScheduledAction:
     """A resolved device job and its durable outcome."""
@@ -74,12 +88,14 @@ class ScheduledActions:
         wall_clock: Callable[[], float] = time.time,
         clock: Callable[[], float] = time.monotonic,
         zone: tzinfo = UTC,
+        allowed_actions: tuple[str, ...] = SCHEDULED_ACTIONS,
     ) -> None:
         self.execute = execute
         self.save = save
         self.wall_clock = wall_clock
         self.clock = clock
         self.zone = zone
+        self.allowed_actions = allowed_actions
         self.jobs: dict[str, ScheduledAction] = {}
         self.closed = False
         self._lock = asyncio.Lock()
@@ -155,16 +171,21 @@ class ScheduledActions:
         *,
         weekdays: list[str] | None = None,
         at_time: str | None = None,
+        execute_at: str | None = None,
     ) -> dict:
         """Save before scheduling and deduplicate repeated tool calls."""
-        if action not in SCHEDULED_ACTIONS:
+        if action not in self.allowed_actions:
             raise TimerError("unsupported_device_action")
+        if type(delay_seconds) is not int or not 1 <= delay_seconds <= MAX_DURATION:
+            raise TimerError("delay_out_of_range")
         creation_rule = None
         if weekdays is not None or at_time is not None:
+            if execute_at is not None:
+                raise TimerError("invalid_schedule_time")
             weekdays, at_time = weekly_rule(weekdays, at_time)
             creation_rule = f"{','.join(weekdays)}@{at_time}"
-        elif type(delay_seconds) is not int or not 1 <= delay_seconds <= MAX_DURATION:
-            raise TimerError("delay_out_of_range")
+        elif execute_at is not None:
+            creation_rule = execute_at
         if not isinstance(entity_id, str) or "." not in entity_id:
             raise TimerError("invalid_entity")
         async with self._lock:
@@ -190,15 +211,18 @@ class ScheduledActions:
             if sum(job.state in ("pending", "executing") for job in self.jobs.values()) >= 128:
                 raise TimerError("too_many_scheduled_actions")
             now = self.wall_clock()
-            execute_at = (
-                self._next_weekly(weekdays, at_time, now) if weekdays else now + delay_seconds
-            )
+            if weekdays:
+                timestamp = self._next_weekly(weekdays, at_time, now)
+            elif execute_at is not None:
+                timestamp = future_timestamp(execute_at, now, self.zone)
+            else:
+                timestamp = now + delay_seconds
             job = ScheduledAction(
                 uuid4().hex,
                 entity_id,
                 action,
                 delay_seconds,
-                execute_at,
+                timestamp,
                 user_id,
                 call_id,
                 weekdays=weekdays,
@@ -206,7 +230,7 @@ class ScheduledActions:
                 creation_rule=creation_rule,
             )
             self.jobs[job.job_id] = job
-            self._deadlines[job.job_id] = self.clock() + (execute_at - now)
+            self._deadlines[job.job_id] = self.clock() + (timestamp - now)
             try:
                 await self._persist()
             except Exception:
@@ -248,15 +272,7 @@ class ScheduledActions:
                 updated.execute_at = self._next_weekly(updated.weekdays, updated.at_time, after)
                 updated.replaced_at = None
             elif execute_at is not None and delay_seconds is None:
-                try:
-                    parsed = datetime.fromisoformat(execute_at)
-                    if parsed.tzinfo is None:
-                        raise ValueError
-                    updated.execute_at = parsed.timestamp()
-                except (TypeError, ValueError, OverflowError, OSError) as err:
-                    raise TimerError("invalid_execution_time") from err
-                if updated.execute_at <= now:
-                    raise TimerError("invalid_execution_time")
+                updated.execute_at = future_timestamp(execute_at, now, self.zone)
             elif (
                 execute_at is None
                 and type(delay_seconds) is int
@@ -375,7 +391,7 @@ class ScheduledActions:
                     or job.job_id in self.jobs
                     or not isinstance(job.entity_id, str)
                     or "." not in job.entity_id
-                    or job.action not in SCHEDULED_ACTIONS
+                    or job.action not in self.allowed_actions
                     or type(job.delay_seconds) is not int
                     or not 1 <= job.delay_seconds <= MAX_DURATION
                     or not isinstance(job.execute_at, (int, float))
