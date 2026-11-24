@@ -19,6 +19,7 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_ALARM_SOUND,
+    CONF_EMERGENCY_ACTION,
     CONF_GOOGLE_SPEAKER,
     CONF_PLAYER,
     CONF_SATELLITE,
@@ -26,6 +27,7 @@ from .const import (
     CONF_WEATHER_ENTITY,
     DOMAIN,
 )
+from .emergency_tools import mobile_app_actions
 from .satellite import validate_entities
 from .timer_manager import TimerError
 
@@ -197,6 +199,7 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 options=[
                                     {"value": "timer", "label": "Assist Timer"},
                                     {"value": "weather", "label": "Assist Weather"},
+                                    {"value": "emergency", "label": "Assist Emergency Contact"},
                                     {"value": "google_speaker", "label": "Assist + Google Speaker"},
                                 ],
                                 mode=SelectSelectorMode.DROPDOWN,
@@ -205,6 +208,9 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     }
                 ),
             )
+        # Route emergency setup; related: emergency_tools.py and translations.
+        if user_input.get("setup_type") == "emergency":
+            return await self.async_step_emergency()
         if user_input.get("setup_type") == "weather" or "weather_entity" in user_input:
             return await self.async_step_weather(
                 {key: value for key, value in user_input.items() if key != "setup_type"} or None
@@ -256,6 +262,8 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reconfigure(self, user_input=None):
         """Change the player without silently transferring a live timer."""
         entry = self._get_reconfigure_entry()
+        if CONF_EMERGENCY_ACTION in entry.data:
+            return await self.async_step_emergency(user_input, entry=entry)
         if CONF_SATELLITE not in entry.data:
             return self.async_abort(reason="unsupported_entry")
         google_speaker = entry.data.get(CONF_GOOGLE_SPEAKER, False)
@@ -278,6 +286,41 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=schema(user_input or entry.data, google_speaker=google_speaker),
             errors=errors,
         )
+
+    # Bind one registered Companion App action; related: emergency_tools.py and translations.
+    async def async_step_emergency(self, user_input=None, *, entry=None):
+        actions = mobile_app_actions(self.hass)
+        if not actions:
+            return self.async_abort(reason="no_mobile_app_actions")
+        errors = {}
+        if user_input is not None:
+            action = user_input.get(CONF_EMERGENCY_ACTION)
+            if action in actions:
+                data = {CONF_EMERGENCY_ACTION: action}
+                if entry is not None:
+                    return self.async_update_reload_and_abort(entry, data_updates=data)
+                await self.async_set_unique_id("assist_emergency_contact")
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(title="Assist Emergency Contact", data=data)
+            errors[CONF_EMERGENCY_ACTION] = "invalid_emergency_action"
+        default = entry.data[CONF_EMERGENCY_ACTION] if entry else None
+        return self.async_show_form(
+            step_id="reconfigure_emergency" if entry else "emergency",
+            data_schema=probatio.Schema(
+                {
+                    probatio.Required(
+                        CONF_EMERGENCY_ACTION, **({"default": default} if default in actions else {})
+                    ): SelectSelector(
+                        SelectSelectorConfig(options=actions, mode=SelectSelectorMode.DROPDOWN)
+                    )
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_reconfigure_emergency(self, user_input=None):
+        """Route the emergency form submission back to the selected entry."""
+        return await self.async_step_emergency(user_input, entry=self._get_reconfigure_entry())
 
     async def async_step_weather(self, user_input=None):
         """Select one unique weather entity for the Assist Weather provider."""

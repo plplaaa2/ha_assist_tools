@@ -22,6 +22,7 @@ from .const import (
     ALARM_ACTION,
     ALARM_FILE,
     ALARM_URL,
+    CONF_EMERGENCY_ACTION,
     CONF_GOOGLE_SPEAKER,
     CONF_PLAYER,
     CONF_SATELLITE,
@@ -31,6 +32,7 @@ from .const import (
     STORAGE_VERSION,
 )
 from .device_control import DeviceControl
+from .emergency_tools import AssistEmergencyAPI
 from .llm import register_api
 from .runtime import Endpoint, Runtime
 from .satellite import SatelliteOutput, validate_entities
@@ -77,6 +79,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Restore one timer for its configured satellite and media player."""
+    # Register the configured emergency provider; related: emergency_tools.py and config_flow.py.
+    if CONF_EMERGENCY_ACTION in entry.data:
+        from homeassistant.helpers.llm import async_register_api
+
+        entry.async_on_unload(
+            async_register_api(hass, AssistEmergencyAPI(hass, entry.data[CONF_EMERGENCY_ACTION]))
+        )
+        return True
     if entry.data.get(CONF_WEATHER_ENTITY):
         entity_id = entry.data[CONF_WEATHER_ENTITY]
         state = hass.states.get(entity_id)
@@ -182,7 +192,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Stop owned alarm output and remove the endpoint during unload."""
-    if entry.data.get(CONF_WEATHER_ENTITY):
+    # Provider-only entries have no timer endpoint; related: emergency_tools.py and weather_tools.py.
+    if CONF_EMERGENCY_ACTION in entry.data or entry.data.get(CONF_WEATHER_ENTITY):
         return True
     runtime: Runtime = hass.data[DOMAIN]
     endpoint = runtime.endpoints.get(entry.entry_id)
@@ -212,7 +223,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Remove persisted timer data only when the configuration is deleted."""
-    if entry.data.get(CONF_WEATHER_ENTITY):
+    # Provider-only entries have no timer storage; related: emergency_tools.py and weather_tools.py.
+    if CONF_EMERGENCY_ACTION in entry.data or entry.data.get(CONF_WEATHER_ENTITY):
         return
     await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}").async_remove()
     await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.alarms").async_remove()

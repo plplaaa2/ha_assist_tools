@@ -54,6 +54,16 @@ With **Assist Scheduled Control**, ask Assist to open the living room curtains a
 
 Timer alarms play on the Google speaker. The satellite can run timer and scheduled control commands without announcement support. For regular Assist replies on the same speaker, forward the URL from ESPHome's `on_tts_end` to Home Assistant's `media_player.play_media`. The Google speaker must be able to reach Home Assistant's internal URL.
 
+### Assist Emergency Contact setup
+
+Choose **Assist Emergency Contact** when adding Assist Tools and select the receiving device's
+`notify.mobile_app_*` action. Enable **Assist Emergency Contact** in your existing LLM
+conversation agent. Use the integration's reconfigure menu to change the receiving device.
+
+Direct pleas such as “살려줘”, “구해줘”, “제발 도와주세요”, and “SOS” request a notification
+immediately. Assist reports whether Home Assistant ran the action. Check the receiving device
+to verify delivery.
+
 ## License
 
 The project code is licensed under the [MIT License](LICENSE). The bundled alarm audio and its loop use the terms of the [original Pixabay sound](https://pixabay.com/sound-effects/beep-alarm-366507/).

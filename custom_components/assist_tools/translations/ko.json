@@ -17,9 +17,22 @@
           "weather_entity": "날씨 엔티티"
         }
       },
+      "emergency": {
+        "title": "Assist 긴급 연락 설정",
+        "description": "Home Assistant Companion 앱 알림 액션을 선택하고 기존 LLM 대화 에이전트에서 Assist Emergency Contact를 활성화하세요.",
+        "data": {
+          "emergency_notify_action": "모바일 앱 알림 액션"
+        }
+      },
+      "reconfigure_emergency": {
+        "title": "긴급 연락 기기 변경",
+        "data": {
+          "emergency_notify_action": "모바일 앱 알림 액션"
+        }
+      },
       "user": {
         "title": "Assist Tools 설정 선택",
-        "description": "위성 타이머 또는 날씨 provider를 설정하세요.",
+        "description": "설정할 Assist Tools 기능을 선택하세요.",
         "data": {
           "setup_type": "기능"
         }
@@ -48,6 +61,7 @@
       }
     },
     "error": {
+      "invalid_emergency_action": "등록된 Companion 앱 알림 액션을 선택하세요.",
       "entity_not_found": "선택한 날씨 엔티티를 사용할 수 없습니다.",
       "invalid_satellite": "등록된 Assist 위성을 선택하세요.",
       "invalid_player": "등록된 미디어 플레이어를 선택하세요.",
@@ -60,6 +74,7 @@
       "cancel_timer_before_reconfigure": "기존 타이머를 취소한 후 설정을 변경하세요."
     },
     "abort": {
+      "no_mobile_app_actions": "등록된 Companion 앱 알림 액션이 없습니다.",
       "already_configured": "이미 설정된 위성입니다.",
       "reconfigure_successful": "설정을 변경했습니다.",
       "unsupported_entry": "지원하지 않는 설정입니다."

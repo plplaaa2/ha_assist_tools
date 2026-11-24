@@ -6,6 +6,7 @@ They are NOT an installed/running Home Assistant or real satellite validation.
 
 import importlib
 import sys
+from contextvars import ContextVar
 from dataclasses import dataclass
 from enum import IntFlag
 from pathlib import Path
@@ -46,6 +47,12 @@ class ToolInput:
     tool_name: str
     tool_args: dict
     id: str = "call-1"
+    external: bool = False
+
+
+@dataclass
+class UserContent:
+    content: str
 
 
 @dataclass
@@ -213,6 +220,12 @@ def ha_contract():
     module("homeassistant.components.climate", ClimateEntityFeature=ClimateFeature)
     module("homeassistant.components.fan", FanEntityFeature=FanFeature)
     module("homeassistant.components.weather", DOMAIN="weather")
+    module("homeassistant.components.conversation")
+    module(
+        "homeassistant.components.conversation.chat_log",
+        UserContent=UserContent,
+        current_chat_log=ContextVar("current_chat_log", default=None),
+    )
     module("homeassistant.components.recorder")
     module(
         "homeassistant.components.recorder.history",
