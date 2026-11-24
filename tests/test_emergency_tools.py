@@ -43,6 +43,54 @@ async def test_global_language_setting_is_saved_and_applied(load_module, hass):
     assert runtime.language == "en"
 
 
+@pytest.mark.parametrize("entry_type", ["timer", "emergency", "weather"])
+async def test_reconfigure_updates_shared_language(load_module, hass, entry_type):
+    config = load_module("config_flow")
+    flow = config.AssistTimersConfigFlow()
+    flow.hass = hass
+    flow.async_show_form = lambda **kwargs: kwargs
+    flow.async_abort = lambda **kwargs: kwargs
+    store = SimpleNamespace(async_save=AsyncMock())
+    endpoint = SimpleNamespace(manager=SimpleNamespace(timer=object()))
+    runtime = SimpleNamespace(language="ko", language_store=store, endpoints={"entry": endpoint})
+    hass.data["assist_tools"] = runtime
+    data = {
+        "timer": {"satellite": "assist_satellite.kitchen", "media_player": "media_player.kitchen"},
+        "emergency": {"emergency_notify_action": ACTION},
+        "weather": {"weather_entity": "weather.home"},
+    }[entry_type]
+    entry = SimpleNamespace(data=data, entry_id="entry", unique_id="kitchen")
+    flow._get_reconfigure_entry = lambda: entry
+    hass.services.async_services_for_domain = lambda domain: {"mobile_app_tablet": object()}
+    form = await flow.async_step_reconfigure()
+    assert "language" in str(form["data_schema"].schema)
+    payload = {"language": "en"}
+    if entry_type != "weather":
+        payload.update(data)
+    result = await flow.async_step_reconfigure(payload)
+    assert result == {"reason": "reconfigure_successful"}
+    store.async_save.assert_awaited_once_with({"language": "en"})
+    assert runtime.language == "en"
+
+
+async def test_invalid_emergency_reconfigure_does_not_change_language(load_module, hass):
+    config = load_module("config_flow")
+    flow = config.AssistTimersConfigFlow()
+    flow.hass = hass
+    flow.async_show_form = lambda **kwargs: kwargs
+    store = SimpleNamespace(async_save=AsyncMock())
+    runtime = SimpleNamespace(language="ko", language_store=store)
+    hass.data["assist_tools"] = runtime
+    flow._get_reconfigure_entry = lambda: SimpleNamespace(data={"emergency_notify_action": ACTION})
+    hass.services.async_services_for_domain = lambda domain: {"mobile_app_tablet": object()}
+    result = await flow.async_step_reconfigure(
+        {"language": "en", "emergency_notify_action": "notify.other"}
+    )
+    assert result["errors"] == {"emergency_notify_action": "invalid_emergency_action"}
+    store.async_save.assert_not_awaited()
+    assert runtime.language == "ko"
+
+
 def test_timer_announcement_languages(load_module):
     announcement = load_module("timer_manager").timer_announcement
     assert announcement(61, "pause") == "설정한 1분 1초 알람을 일시정지하였습니다."

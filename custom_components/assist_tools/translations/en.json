@@ -26,8 +26,17 @@
       },
       "reconfigure_emergency": {
         "title": "Change emergency contact device",
+        "description": "The output language applies to every Assist Tools feature.",
         "data": {
+          "language": "Output language",
           "emergency_notify_action": "Mobile app notification action"
+        }
+      },
+      "reconfigure_language": {
+        "title": "Change output language",
+        "description": "The output language applies to every Assist Tools feature.",
+        "data": {
+          "language": "Output language"
         }
       },
       "user": {
@@ -54,8 +63,9 @@
       },
       "reconfigure": {
         "title": "Update satellite settings",
-        "description": "Cancel any active timer before updating the media player. To change the satellite device, remove this entry and add a new one.",
+        "description": "The output language applies to every Assist Tools feature. Cancel any active timer before updating the media player. To change the satellite device, remove this entry and add a new one.",
         "data": {
+          "language": "Output language",
           "satellite": "Assist satellite",
           "media_player": "Alarm media player"
         }

@@ -26,8 +26,17 @@
       },
       "reconfigure_emergency": {
         "title": "긴급 연락 기기 변경",
+        "description": "안내 언어는 모든 Assist Tools 기능에 적용됩니다.",
         "data": {
+          "language": "안내 언어",
           "emergency_notify_action": "모바일 앱 알림 액션"
+        }
+      },
+      "reconfigure_language": {
+        "title": "안내 언어 변경",
+        "description": "안내 언어는 모든 Assist Tools 기능에 적용됩니다.",
+        "data": {
+          "language": "안내 언어"
         }
       },
       "user": {
@@ -54,8 +63,9 @@
       },
       "reconfigure": {
         "title": "위성 설정 변경",
-        "description": "미디어 플레이어를 변경하기 전에 기존 타이머를 취소하세요. 위성 장치를 바꾸려면 이 항목을 삭제하고 새로 추가하세요.",
+        "description": "안내 언어는 모든 Assist Tools 기능에 적용됩니다. 미디어 플레이어를 변경하기 전에 기존 타이머를 취소하세요. 위성 장치를 바꾸려면 이 항목을 삭제하고 새로 추가하세요.",
         "data": {
+          "language": "안내 언어",
           "satellite": "Assist 위성",
           "media_player": "알람 미디어 플레이어"
         }

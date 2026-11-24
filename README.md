@@ -34,7 +34,7 @@ Copy the entire `custom_components/assist_tools/` directory to the same path in 
 
 When adding Assist Tools, choose the feature to configure, including **Assist Timer**, **Assist Weather**, or **Assist Emergency Contact**. Enable each desired provider in your existing LLM conversation agent.
 
-Choose the shared output language on the first setup screen. It applies to timer announcements and emergency notifications across all entries and defaults to Korean. To change it, open the Assist Tools add screen, select a language and choose **Language settings**.
+Choose the shared output language on the first setup screen. It applies to timer announcements and emergency notifications across all entries and defaults to Korean. Change it from the reconfigure menu of any existing Assist Tools entry.
 
 ### Assist Timer setup
 

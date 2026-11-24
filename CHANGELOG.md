@@ -6,6 +6,7 @@
 - Let the LLM identify direct rescue requests in any language and send a notification immediately. Suppress duplicate submissions within a turn.
 - Change the receiving device through the integration's reconfigure menu.
 - Select a shared Korean or English language for timer announcements and emergency notifications.
+- Change the shared output language from any existing Assist Tools entry's reconfiguration screen.
 
 ## [0.3.3] - 2026-11-20
 
