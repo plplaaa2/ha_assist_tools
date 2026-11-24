@@ -136,6 +136,8 @@ class Runtime:
     """Keep one API registry and isolated endpoints for all configured satellites."""
 
     def __init__(self) -> None:
+        # Shared output language for all entries; related: config_flow.py and __init__.py.
+        self.language = "ko"
         self.endpoints: dict[str, Endpoint] = {}
         self.unregister_api = None
         self.actions = None

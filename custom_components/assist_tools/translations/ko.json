@@ -34,6 +34,7 @@
         "title": "Assist Tools 설정 선택",
         "description": "설정할 Assist Tools 기능을 선택하세요.",
         "data": {
+          "language": "안내 언어",
           "setup_type": "기능"
         }
       },
@@ -74,6 +75,7 @@
       "cancel_timer_before_reconfigure": "기존 타이머를 취소한 후 설정을 변경하세요."
     },
     "abort": {
+      "language_updated": "모든 Assist Tools 기능의 안내 언어를 변경했습니다.",
       "no_mobile_app_actions": "등록된 Companion 앱 알림 액션이 없습니다.",
       "already_configured": "이미 설정된 위성입니다.",
       "reconfigure_successful": "설정을 변경했습니다.",

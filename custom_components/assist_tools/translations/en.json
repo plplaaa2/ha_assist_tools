@@ -34,6 +34,7 @@
         "title": "Choose Assist Tools setup",
         "description": "Choose the Assist Tools feature to configure.",
         "data": {
+          "language": "Output language",
           "setup_type": "Feature"
         }
       },
@@ -73,6 +74,7 @@
       "cancel_timer_before_reconfigure": "Cancel the existing timer before reconfiguring."
     },
     "abort": {
+      "language_updated": "Output language updated for all Assist Tools features.",
       "no_mobile_app_actions": "No Companion App notification actions are registered.",
       "already_configured": "This satellite is already configured.",
       "reconfigure_successful": "Settings updated.",

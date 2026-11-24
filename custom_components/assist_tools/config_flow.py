@@ -21,6 +21,7 @@ from .const import (
     CONF_ALARM_SOUND,
     CONF_EMERGENCY_ACTION,
     CONF_GOOGLE_SPEAKER,
+    CONF_LANGUAGE,
     CONF_PLAYER,
     CONF_SATELLITE,
     CONF_TIMER_SOUND,
@@ -194,10 +195,24 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="user",
                 data_schema=probatio.Schema(
                     {
+                        # Show the shared language before feature selection; related: runtime.py.
+                        probatio.Required(
+                            CONF_LANGUAGE,
+                            default=getattr(self.hass.data.get(DOMAIN), "language", "ko"),
+                        ): SelectSelector(
+                            SelectSelectorConfig(
+                                options=[
+                                    {"value": "ko", "label": "한국어"},
+                                    {"value": "en", "label": "English"},
+                                ],
+                                mode=SelectSelectorMode.DROPDOWN,
+                            )
+                        ),
                         probatio.Required("setup_type"): SelectSelector(
                             SelectSelectorConfig(
                                 options=[
                                     {"value": "timer", "label": "Assist Timer"},
+                                    {"value": "language", "label": "Language settings"},
                                     {"value": "weather", "label": "Assist Weather"},
                                     {"value": "emergency", "label": "Assist Emergency Contact"},
                                     {"value": "google_speaker", "label": "Assist + Google Speaker"},
@@ -208,9 +223,19 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     }
                 ),
             )
+        # Persist global language once and apply it to active providers; related: runtime.py.
+        if "setup_type" in user_input and CONF_LANGUAGE in user_input:
+            runtime = self.hass.data.get(DOMAIN)
+            if runtime is not None:
+                await runtime.language_store.async_save({CONF_LANGUAGE: user_input[CONF_LANGUAGE]})
+                runtime.language = user_input[CONF_LANGUAGE]
+        if user_input.get("setup_type") == "language":
+            return self.async_abort(reason="language_updated")
         # Route emergency setup; related: emergency_tools.py and translations.
         if user_input.get("setup_type") == "emergency":
             return await self.async_step_emergency()
+        if user_input.get("setup_type") == "weather":
+            return await self.async_step_weather()
         if user_input.get("setup_type") == "weather" or "weather_entity" in user_input:
             return await self.async_step_weather(
                 {key: value for key, value in user_input.items() if key != "setup_type"} or None

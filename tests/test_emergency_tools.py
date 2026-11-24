@@ -9,6 +9,46 @@ import pytest
 ACTION = "notify.mobile_app_tablet"
 
 
+async def test_global_language_changes_emergency_notification(ha_contract, load_module, hass):
+    emergency = load_module("emergency_tools")
+    hass.data["assist_tools"] = SimpleNamespace(language="en")
+    hass.services.has_service = lambda domain, service: True
+    hass.services.async_call = AsyncMock()
+    token = emergency.current_chat_log.set(
+        SimpleNamespace(content=[emergency.UserContent("Help me")])
+    )
+    try:
+        tool = emergency.EmergencyTool(ACTION)
+        result = await tool.async_call(
+            hass, ha_contract.ToolInput(tool.name, {}), ha_contract.LLMContext(device_id="kitchen")
+        )
+    finally:
+        emergency.current_chat_log.reset(token)
+    assert not result.error
+    assert hass.services.async_call.await_args.args[2] == {
+        "title": emergency._EN_TITLE,
+        "message": emergency._EN_MESSAGE,
+    }
+
+
+async def test_global_language_setting_is_saved_and_applied(load_module, hass):
+    flow = load_module("config_flow").AssistTimersConfigFlow()
+    flow.hass = hass
+    flow.async_abort = lambda **kwargs: kwargs
+    runtime = SimpleNamespace(language="ko", language_store=SimpleNamespace(async_save=AsyncMock()))
+    hass.data["assist_tools"] = runtime
+    result = await flow.async_step_user({"setup_type": "language", "language": "en"})
+    assert result == {"reason": "language_updated"}
+    runtime.language_store.async_save.assert_awaited_once_with({"language": "en"})
+    assert runtime.language == "en"
+
+
+def test_timer_announcement_languages(load_module):
+    announcement = load_module("timer_manager").timer_announcement
+    assert announcement(61, "pause") == "설정한 1분 1초 알람을 일시정지하였습니다."
+    assert announcement(61, "pause", "en") == "The 1 minute 1 second timer has been paused."
+
+
 @pytest.mark.parametrize(
     ("utterance", "external", "accepted"),
     [

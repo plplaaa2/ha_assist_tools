@@ -34,6 +34,8 @@ Copy the entire `custom_components/assist_tools/` directory to the same path in 
 
 When adding Assist Tools, choose the feature to configure, including **Assist Timer**, **Assist Weather**, or **Assist Emergency Contact**. Enable each desired provider in your existing LLM conversation agent.
 
+Choose the shared output language on the first setup screen. It applies to timer announcements and emergency notifications across all entries and defaults to Korean. To change it, open the Assist Tools add screen, select a language and choose **Language settings**.
+
 ### Assist Timer setup
 
 1. In **Settings → Devices & services → Add integration → Assist Tools**, select a satellite. If exactly one available media player has the same display name, it is connected automatically. If there is no unique match, a player selection screen appears. A player already used by another satellite timer is not selected automatically. You can change the player later through reconfiguration.

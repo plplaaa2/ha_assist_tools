@@ -5,6 +5,7 @@
 - Add Assist Emergency Contact. Select a registered Home Assistant Companion App notification action when setting up the integration and enable the provider in your LLM conversation agent.
 - Let the LLM identify direct rescue requests in any language and send a notification immediately. Suppress duplicate submissions within a turn.
 - Change the receiving device through the integration's reconfigure menu.
+- Select a shared Korean or English language for timer announcements and emergency notifications.
 
 ## [0.3.3] - 2026-11-20
 

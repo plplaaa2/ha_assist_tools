@@ -14,6 +14,8 @@ _LOGGER = logging.getLogger(__name__)
 _ACTION = re.compile(r"notify\.mobile_app_[a-z0-9_]+")
 _TITLE = "긴급 도움 요청"
 _MESSAGE = "Assist에서 긴급 도움 요청이 감지되었습니다. 즉시 확인해 주세요."
+_EN_TITLE = "Emergency help requested"
+_EN_MESSAGE = "Assist detected an emergency request for help. Please check immediately."
 
 
 def mobile_app_actions(hass: HomeAssistant) -> list[str]:
@@ -67,10 +69,15 @@ class EmergencyTool(llm.Tool):
                     error=True,
                 )
             try:
+                # Resolve the shared language at dispatch time; related: config_flow.py.
+                language = getattr(hass.data.get(DOMAIN), "language", "ko")
                 await hass.services.async_call(
                     "notify",
                     service,
-                    {"title": _TITLE, "message": _MESSAGE},
+                    {
+                        "title": _EN_TITLE if language == "en" else _TITLE,
+                        "message": _EN_MESSAGE if language == "en" else _MESSAGE,
+                    },
                     blocking=True,
                     context=llm_context.context,
                 )
