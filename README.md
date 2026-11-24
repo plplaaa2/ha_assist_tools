@@ -61,8 +61,9 @@ Choose **Assist Emergency Contact** when adding Assist Tools and select the rece
 `notify.mobile_app_*` action. Enable **Assist Emergency Contact** in your existing LLM
 conversation agent. Use the integration's reconfigure menu to change the receiving device.
 
-Direct pleas such as “살려줘”, “구해줘”, “제발 도와주세요”, and “SOS” request a notification
-immediately. Assist reports whether Home Assistant ran the action. Check the receiving device
+Direct pleas such as “살려줘”, “구해줘”, “Help me”, and “SOS” request a notification
+immediately. The LLM conversation agent judges requests in any language, so recognition varies
+by model. Assist reports whether Home Assistant ran the action. Check the receiving device
 to verify delivery.
 
 ## License

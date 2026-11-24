@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import re
-import unicodedata
 
 from homeassistant.components.conversation.chat_log import UserContent, current_chat_log
 from homeassistant.core import HomeAssistant
@@ -13,11 +12,6 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 _ACTION = re.compile(r"notify\.mobile_app_[a-z0-9_]+")
-_REQUEST = re.compile(
-    r"(?:제발\s*)?(?:저를\s*|나를\s*|나\s*)?"
-    r"(?:살려|구해|도와)\s*(?:줘요?|주세요|주십시오)[!.…]*|s\.?o\.?s[!.…]*",
-    re.IGNORECASE,
-)
 _TITLE = "긴급 도움 요청"
 _MESSAGE = "Assist에서 긴급 도움 요청이 감지되었습니다. 즉시 확인해 주세요."
 
@@ -36,7 +30,7 @@ class EmergencyTool(llm.Tool):
 
     name = "assist_emergency__notify"
     title = _TITLE
-    description = "Send an emergency notification for a direct Korean plea for rescue or SOS."
+    description = "Send an emergency notification for a direct request for urgent help in any language."
     integration = DOMAIN
     annotations = llm.ToolAnnotations(destructive=False)
 
@@ -48,7 +42,7 @@ class EmergencyTool(llm.Tool):
     async def async_call(
         self, hass: HomeAssistant, tool_input: llm.ToolInput, llm_context: llm.LLMContext
     ) -> llm.ToolResult:
-        """Validate the Assist transcript and prevent duplicate calls within this turn."""
+        """Require a user message and prevent duplicate calls within this turn."""
         chat_log = current_chat_log.get()
         latest_user = (
             next(
@@ -57,11 +51,7 @@ class EmergencyTool(llm.Tool):
             if chat_log is not None
             else None
         )
-        if (
-            tool_input.external
-            or latest_user is None
-            or not _REQUEST.fullmatch(unicodedata.normalize("NFKC", latest_user.content).strip())
-        ):
+        if tool_input.external or latest_user is None or not latest_user.content.strip():
             return llm.ToolResult(data={"error": "직접적인 긴급 도움 요청이 아닙니다."}, error=True)
 
         async with self._lock:
@@ -103,11 +93,12 @@ class AssistEmergencyAPI(llm.API):
         return llm.APIInstance(
             api=self,
             api_prompt=(
-                "When the latest user message is a direct plea for rescue such as "
-                "살려줘, 구해줘, 제발 살려줘, 도와주세요, or SOS, immediately call "
-                "assist_emergency__notify once without asking for confirmation. "
-                "The tool verifies the original user message. Do not call for quoted, hypothetical, negated, "
-                "or ordinary requests for assistance. Report the actual tool result. A submitted "
+                "Assess the latest user message in any language and its context for a direct "
+                "request for urgent help or rescue, including ambiguous immediate pleas such as "
+                "'살려줘', '구해줘', 'Help me', 'Save me', or 'SOS'. Immediately call "
+                "assist_emergency__notify once without asking for confirmation. Do not call for "
+                "quoted, hypothetical, negated, or ordinary requests for assistance, such as "
+                "help with homework or moving furniture. Report the actual tool result. A submitted "
                 "result means Home Assistant accepted the call, not that a phone received it."
             ),
             llm_context=llm_context,

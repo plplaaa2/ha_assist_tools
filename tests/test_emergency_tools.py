@@ -1,4 +1,4 @@
-"""Exercise the mobile action and transcript boundaries; related: emergency_tools.py."""
+"""Exercise emergency notification boundaries; related: emergency_tools.py."""
 
 import asyncio
 from types import SimpleNamespace
@@ -16,14 +16,13 @@ ACTION = "notify.mobile_app_tablet"
         ("구해 줘!", False, True),
         ("제발 저를 도와주세요", False, True),
         ("ＳＯＳ", False, True),
-        ("살려줘라고 말하면 어떻게 돼?", False, False),
-        ("“구해줘”", False, False),
-        ("숙제 좀 도와줘", False, False),
+        ("Help me, I'm hurt", False, True),
+        ("¡Ayuda, me caí!", False, True),
         ("살려줘", True, False),
         (None, False, False),
     ],
 )
-async def test_emergency_requires_original_direct_request(
+async def test_emergency_requires_user_message_and_prevents_duplicate_calls(
     ha_contract, load_module, hass, utterance, external, accepted
 ):
     emergency = load_module("emergency_tools")

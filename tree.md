@@ -18,7 +18,7 @@ assist_timers/
 |   |-- test_timer_manager.py       # Lifecycle, real scheduling, restoration, races
 |   |-- test_scheduled_actions.py   # Delayed device jobs, permissions, restoration
 |   |-- test_climate_tools.py       # Device-specific HVAC/fan modes and authorization
-|   |-- test_emergency_tools.py     # Mobile action selection, transcript validation and dispatch
+|   |-- test_emergency_tools.py     # Mobile action selection and dispatch
 |   |-- test_fan_tools.py           # Fan presets, oscillation, direction and permissions
 |   |-- test_history_tools.py       # Recorder boundaries, snapshots, limits and read policy
 |   `-- test_tools_and_output.py    # Routing, API, media, setup, and configuration
@@ -36,7 +36,7 @@ assist_timers/
         |-- history_tools.py        # Read-only Recorder history, chunking and serialization
         |-- weather_tools.py        # Selected weather entity conditions and daily forecast provider
         |-- device_control.py       # Assist exposure, permissions, power capabilities
-        |-- emergency_tools.py     # Emergency transcript validation and Companion App notification
+        |-- emergency_tools.py     # Emergency request guidance and Companion App notification
         |-- manifest.json           # HA metadata, config flow, version 0.3.4
         |-- runtime.py              # Device routing, deduplication, confirmations
         |-- satellite.py            # Announce speech and normal-media play/stop
