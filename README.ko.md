@@ -3,7 +3,7 @@
 [🇺🇸 English Version](./README.md) | [🇰🇷 한국어 버전](./README.ko.md)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-![version](https://img.shields.io/badge/version-v0.3.3-blue.svg?style=for-the-badge)
+![version](https://img.shields.io/badge/version-v0.3.4-blue.svg?style=for-the-badge)
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
@@ -11,6 +11,7 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 
 ## 기능
 
+- Assist에서 직접적인 구조 요청을 인식하면 지정한 Home Assistant Companion 앱으로 알림 전송
 - 타이머 설정 및 기기 종료 예약
 - Assist 음성으로 예약을 조회·변경·취소하고, 원하는 요일에 기기 동작을 반복 예약
 - 원하는 시각에 한 번 또는 여러 요일에 반복해서 울리는 알람
@@ -31,7 +32,7 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 
 ## 설정
 
-Assist Tools를 추가할 때 **Assist Timer**는 위성 타이머, **Assist Weather**는 날씨 엔티티를 설정합니다. 각 기능을 기존 LLM 대화 에이전트에서 별도 도구 제공자로 활성화하세요.
+Assist Tools를 추가할 때 **Assist Timer**, **Assist Weather**, **Assist Emergency Contact** 등 원하는 기능을 선택하세요. 각 기능을 기존 LLM 대화 에이전트에서 별도 도구 제공자로 활성화하세요.
 
 ### Assist Timer 설정
 

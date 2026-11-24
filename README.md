@@ -3,7 +3,7 @@
 [🇺🇸 English Version](./README.md) | [🇰🇷 한국어 버전](./README.ko.md)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-![version](https://img.shields.io/badge/version-v0.3.3-blue.svg?style=for-the-badge)
+![version](https://img.shields.io/badge/version-v0.3.4-blue.svg?style=for-the-badge)
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
@@ -11,6 +11,7 @@ A Home Assistant HACS custom integration that provides Assist timers, scheduled 
 
 ## Features
 
+- Send a Companion App notification from Assist when someone asks for emergency help.
 - Set timers and schedule device shutdowns
 - List, reschedule, or cancel device jobs by voice, and repeat device actions on selected weekdays
 - Set one-time or weekly clock alarms on the requesting satellite's speaker
@@ -31,7 +32,7 @@ Copy the entire `custom_components/assist_tools/` directory to the same path in 
 
 ## Setup
 
-When adding Assist Tools, choose **Assist Timer** for a satellite timer or **Assist Weather** to select a weather entity. Enable each desired provider in your existing LLM conversation agent.
+When adding Assist Tools, choose the feature to configure, including **Assist Timer**, **Assist Weather**, or **Assist Emergency Contact**. Enable each desired provider in your existing LLM conversation agent.
 
 ### Assist Timer setup
 

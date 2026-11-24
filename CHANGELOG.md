@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.4] - 2026-11-24
+
+- Add Assist Emergency Contact. Select a registered Home Assistant Companion App notification action when setting up the integration and enable the provider in your LLM conversation agent.
+- Send a notification immediately on direct rescue requests such as “살려줘”, “구해줘”, or “SOS”. Validate the original Assist utterance and suppress duplicate submissions within a turn.
+- Change the receiving device through the integration's reconfigure menu.
+
 ## [0.3.3] - 2026-11-20
 
 - Add scheduled opening and closing for supported cover entities, such as curtains and blinds, through Assist and Home Assistant actions.
