@@ -185,6 +185,32 @@ async def test_sound_options_save_independent_local_audio(load_module, hass):
     assert rejected["errors"] == {"timer_sound": "invalid_alarm_sound"}
 
 
+@pytest.mark.parametrize(
+    ("data", "reason", "placeholders"),
+    [
+        ({"weather_entity": "weather.home"}, "weather_settings", {"entity_id": "weather.home"}),
+        (
+            {"emergency_notify_action": "notify.mobile_app_phone"},
+            "emergency_settings",
+            {"notify_action": "notify.mobile_app_phone"},
+        ),
+    ],
+)
+async def test_non_satellite_options_show_configured_destination(
+    load_module, data, reason, placeholders
+):
+    config = load_module("config_flow")
+    entry = SimpleNamespace(data=data)
+    flow = config.AssistTimersConfigFlow.async_get_options_flow(entry)
+    flow.config_entry = entry
+    flow.async_abort = lambda **kwargs: kwargs
+
+    assert await flow.async_step_init() == {
+        "reason": reason,
+        "description_placeholders": placeholders,
+    }
+
+
 @pytest.fixture
 async def endpoints(load_module, hass):
     core = load_module("timer_manager")

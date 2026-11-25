@@ -107,6 +107,8 @@
       "invalid_alarm_sound": "Select a playable audio file from My media."
     },
     "abort": {
+      "weather_settings": "Weather entity: {entity_id}. Use Reconfigure to change the announcement language.",
+      "emergency_settings": "Emergency notification recipient: {notify_action}. Use Reconfigure to change the recipient.",
       "unsupported_entry": "Sound options are available for entries with a configured satellite and speaker."
     }
   }
