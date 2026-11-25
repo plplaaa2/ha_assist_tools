@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.4] - 2026-11-24
+
+- Add Assist Emergency Contact. Select a registered Home Assistant Companion App notification action when setting up the integration and enable the provider in your LLM conversation agent.
+- Let the LLM identify direct rescue requests in any language and send a notification immediately. Suppress duplicate submissions within a turn.
+- Change the receiving device through the integration's reconfigure menu.
+- Select a shared Korean or English language for timer announcements and emergency notifications.
+- Change the shared output language from any existing Assist Tools entry's reconfiguration screen.
+
 ## [0.3.3] - 2026-11-20
 
 - Add scheduled opening and closing for supported cover entities, such as curtains and blinds, through Assist and Home Assistant actions.

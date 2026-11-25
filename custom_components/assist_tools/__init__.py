@@ -22,7 +22,9 @@ from .const import (
     ALARM_ACTION,
     ALARM_FILE,
     ALARM_URL,
+    CONF_EMERGENCY_ACTION,
     CONF_GOOGLE_SPEAKER,
+    CONF_LANGUAGE,
     CONF_PLAYER,
     CONF_SATELLITE,
     CONF_WEATHER_ENTITY,
@@ -31,11 +33,12 @@ from .const import (
     STORAGE_VERSION,
 )
 from .device_control import DeviceControl
+from .emergency_tools import AssistEmergencyAPI
 from .llm import register_api
 from .runtime import Endpoint, Runtime
 from .satellite import SatelliteOutput, validate_entities
 from .scheduled_actions import SCHEDULED_ACTIONS, ScheduledActions
-from .timer_manager import TimerError, TimerManager, duration_text
+from .timer_manager import TimerError, TimerManager, timer_announcement
 from .weather_tools import AssistWeatherAPI
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,6 +50,11 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Serve only the bundled alarm and register the separate tool providers."""
     runtime = Runtime()
+    # Restore one shared language before providers are registered; related: config_flow.py.
+    runtime.language_store = Store(hass, 1, f"{DOMAIN}.language")
+    saved_language = await runtime.language_store.async_load()
+    if isinstance(saved_language, dict) and saved_language.get(CONF_LANGUAGE) in ("ko", "en"):
+        runtime.language = saved_language[CONF_LANGUAGE]
     runtime.control = DeviceControl(hass)
     hass.data[DOMAIN] = runtime
     await hass.http.async_register_static_paths(
@@ -77,6 +85,14 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Restore one timer for its configured satellite and media player."""
+    # Register the configured emergency provider; related: emergency_tools.py and config_flow.py.
+    if CONF_EMERGENCY_ACTION in entry.data:
+        from homeassistant.helpers.llm import async_register_api
+
+        entry.async_on_unload(
+            async_register_api(hass, AssistEmergencyAPI(hass, entry.data[CONF_EMERGENCY_ACTION]))
+        )
+        return True
     if entry.data.get(CONF_WEATHER_ENTITY):
         entity_id = entry.data[CONF_WEATHER_ENTITY]
         state = hass.states.get(entity_id)
@@ -182,7 +198,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Stop owned alarm output and remove the endpoint during unload."""
-    if entry.data.get(CONF_WEATHER_ENTITY):
+    # Provider-only entries have no timer endpoint; related: emergency_tools.py and weather_tools.py.
+    if CONF_EMERGENCY_ACTION in entry.data or entry.data.get(CONF_WEATHER_ENTITY):
         return True
     runtime: Runtime = hass.data[DOMAIN]
     endpoint = runtime.endpoints.get(entry.entry_id)
@@ -212,7 +229,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Remove persisted timer data only when the configuration is deleted."""
-    if entry.data.get(CONF_WEATHER_ENTITY):
+    # Provider-only entries have no timer storage; related: emergency_tools.py and weather_tools.py.
+    if CONF_EMERGENCY_ACTION in entry.data or entry.data.get(CONF_WEATHER_ENTITY):
         return
     await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}").async_remove()
     await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}.alarms").async_remove()
@@ -241,14 +259,8 @@ def register_services(hass: HomeAssistant, runtime: Runtime) -> None:
         except TimerError as err:
             raise ServiceValidationError(str(err)) from err
         if operation not in ("create", "status") and not result.get("skip_announcement", False):
-            duration = duration_text(result["duration_seconds"])
-            endings = {
-                "pause": "을 일시정지하였습니다.",
-                "resume": "을 재개하였습니다.",
-                "cancel": "을 중지하였습니다.",
-            }
             endpoint.queue_announcement(
-                f"설정한 {duration} 알람{endings[operation]}",
+                timer_announcement(result["duration_seconds"], operation, runtime.language),
                 result["state"],
                 result.get("timer_id"),
             )

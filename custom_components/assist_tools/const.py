@@ -7,6 +7,9 @@ CONF_SATELLITE = "satellite"
 CONF_PLAYER = "media_player"
 CONF_GOOGLE_SPEAKER = "google_speaker"
 CONF_WEATHER_ENTITY = "weather_entity"
+CONF_EMERGENCY_ACTION = "emergency_notify_action"
+# Global output language; related: config_flow.py, runtime.py and message providers.
+CONF_LANGUAGE = "language"
 ALARM_SECONDS = 60
 MAX_DURATION = 604800
 ALARM_FILE = "alarm_60s.mp3"

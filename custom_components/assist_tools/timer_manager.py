@@ -59,6 +59,22 @@ def duration_text(seconds: int) -> str:
     )
 
 
+# Format both Assist and service confirmations; related: llm.py and __init__.py.
+def timer_announcement(seconds: int, operation: str, language: str = "ko") -> str:
+    if language == "en":
+        hours, remainder = divmod(seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        duration = " ".join(
+            f"{value} {unit}{'s' if value != 1 else ''}"
+            for value, unit in ((hours, "hour"), (minutes, "minute"), (seconds, "second"))
+            if value
+        )
+        verb = {"pause": "paused", "resume": "resumed", "cancel": "cancelled"}[operation]
+        return f"The {duration} timer has been {verb}."
+    ending = {"pause": "일시정지하였습니다.", "resume": "재개하였습니다.", "cancel": "중지하였습니다."}
+    return f"설정한 {duration_text(seconds)} 알람을 {ending[operation]}"
+
+
 class TimerManager:
     """Serialize lifecycle transitions and reject duplicate timers."""
 

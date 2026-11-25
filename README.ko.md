@@ -3,7 +3,7 @@
 [🇺🇸 English Version](./README.md) | [🇰🇷 한국어 버전](./README.ko.md)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-![version](https://img.shields.io/badge/version-v0.3.3-blue.svg?style=for-the-badge)
+![version](https://img.shields.io/badge/version-v0.3.4-blue.svg?style=for-the-badge)
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
@@ -11,6 +11,7 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 
 ## 기능
 
+- Assist에서 직접적인 구조 요청을 인식하면 지정한 Home Assistant Companion 앱으로 알림 전송
 - 타이머 설정 및 기기 종료 예약
 - Assist 음성으로 예약을 조회·변경·취소하고, 원하는 요일에 기기 동작을 반복 예약
 - 원하는 시각에 한 번 또는 여러 요일에 반복해서 울리는 알람
@@ -31,7 +32,9 @@ HA 음성 도우미가 기본적으로 지원하지 않는 Assist 타이머, 기
 
 ## 설정
 
-Assist Tools를 추가할 때 **Assist Timer**는 위성 타이머, **Assist Weather**는 날씨 엔티티를 설정합니다. 각 기능을 기존 LLM 대화 에이전트에서 별도 도구 제공자로 활성화하세요.
+Assist Tools를 추가할 때 **Assist Timer**, **Assist Weather**, **Assist Emergency Contact** 등 원하는 기능을 선택하세요. 각 기능을 기존 LLM 대화 에이전트에서 별도 도구 제공자로 활성화하세요.
+
+첫 설정 화면의 **안내 언어**는 모든 위성의 타이머 안내와 긴급 연락 알림에 공통 적용됩니다. 한국어가 기본값이며 영어도 선택할 수 있습니다. 기존 Assist Tools 항목의 **재구성**에서도 언어를 변경할 수 있습니다.
 
 ### Assist Timer 설정
 
@@ -53,6 +56,17 @@ Assist Tools를 추가할 때 **Assist + Google Speaker**를 선택하고 마이
 **Assist Scheduled Control**에서 “월·수·금 오전 7시에 거실 커튼 열어 줘”, “거실 커튼 예약 알려 줘”, “다음 번만 오전 8시로 옮겨 줘”, “앞으로 수요일은 빼 줘”라고 요청할 수 있습니다. 반복 시각은 Home Assistant 시간대를 따릅니다. 다음 한 번의 실행은 그다음 정규 실행보다 앞선 시각으로 옮길 수 있으며, 반복 예약을 취소하면 이후 실행도 모두 취소됩니다.
 
 타이머 만료음은 Google 스피커에서 재생됩니다. 위성의 알림 기능 없이도 타이머와 예약 제어를 사용할 수 있습니다. 일반 Assist 응답을 같은 스피커에서 듣는 경우 ESPHome의 `on_tts_end`에서 받은 URL을 Home Assistant의 `media_player.play_media`에 전달하세요. Google 스피커는 Home Assistant의 내부 URL에 접근할 수 있어야 합니다.
+
+### Assist 긴급 연락 설정
+
+Assist Tools를 추가할 때 **Assist Emergency Contact**를 선택하고, 수신 기기의
+`notify.mobile_app_*` 액션을 고르세요. 기존 LLM 대화 에이전트에서 **Assist Emergency Contact**를
+활성화하세요. 수신 기기는 통합의 재구성 메뉴에서 바꿀 수 있습니다.
+
+“살려줘”, “구해줘”, “제발 도와주세요”, “SOS” 같은 직접 요청은 추가 확인 없이
+알림을 요청합니다. LLM 대화 에이전트가 언어와 문맥을 판단하므로 인식 결과는 모델에 따라 달라질 수 있습니다.
+Assist에서 성공을 안내하면 Home Assistant가 알림 액션을 실행한 상태입니다.
+기기에 알림이 표시됐는지는 수신 기기에서 확인하세요.
 
 ## 라이선스
 

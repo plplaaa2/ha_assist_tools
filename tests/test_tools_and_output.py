@@ -570,11 +570,11 @@ def test_metadata_and_translations_match():
     base = ROOT / "custom_components/assist_tools"
     manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["domain"] == base.name == "assist_tools"
-    assert manifest["version"] == "0.3.3" and manifest["config_flow"] is True
+    assert manifest["version"] == "0.3.4" and manifest["config_flow"] is True
     english = json.loads((base / "strings.json").read_text(encoding="utf-8"))
     korean = json.loads((base / "translations/ko.json").read_text(encoding="utf-8"))
     assert english["config"]["error"].keys() == korean["config"]["error"].keys()
-    assert set(korean["config"]["step"]["user"]["data"]) == {"setup_type"}
+    assert set(korean["config"]["step"]["user"]["data"]) == {"language", "setup_type"}
     assert set(korean["config"]["step"]["satellite"]["data"]) == {"satellite"}
     assert set(korean["config"]["step"]["weather"]["data"]) == {"weather_entity"}
     assert set(korean["config"]["step"]["player"]["data"]) == {"media_player"}

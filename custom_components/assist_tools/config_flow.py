@@ -19,13 +19,16 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_ALARM_SOUND,
+    CONF_EMERGENCY_ACTION,
     CONF_GOOGLE_SPEAKER,
+    CONF_LANGUAGE,
     CONF_PLAYER,
     CONF_SATELLITE,
     CONF_TIMER_SOUND,
     CONF_WEATHER_ENTITY,
     DOMAIN,
 )
+from .emergency_tools import mobile_app_actions
 from .satellite import validate_entities
 from .timer_manager import TimerError
 
@@ -66,6 +69,22 @@ def weather_schema(default: str | None = None) -> probatio.Schema:
             ): selector.EntitySelector(selector.EntitySelectorConfig(domain=WEATHER_DOMAIN))
         }
     )
+
+
+# Expose the same global language in setup and reconfiguration; related: runtime.py.
+def language_field(default: str) -> dict:
+    """Build the shared language selector."""
+    return {
+        probatio.Required(CONF_LANGUAGE, default=default): SelectSelector(
+            SelectSelectorConfig(
+                options=[
+                    {"value": "ko", "label": "한국어"},
+                    {"value": "en", "label": "English"},
+                ],
+                mode=SelectSelectorMode.DROPDOWN,
+            )
+        )
+    }
 
 
 def matching_player(hass, satellite_id: str) -> str | None:
@@ -186,17 +205,29 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry):
         return AlarmSoundOptions()
 
+    # Persist only after reconfiguration passes validation; related: runtime.py.
+    async def _async_save_language(self, user_input):
+        if CONF_LANGUAGE in user_input:
+            runtime = self.hass.data[DOMAIN]
+            language = user_input[CONF_LANGUAGE]
+            await runtime.language_store.async_save({CONF_LANGUAGE: language})
+            runtime.language = language
+
     async def async_step_user(self, user_input=None):
         if user_input is None:
             return self.async_show_form(
                 step_id="user",
                 data_schema=probatio.Schema(
                     {
+                        # Show the shared language before feature selection; related: runtime.py.
+                        **language_field(getattr(self.hass.data.get(DOMAIN), "language", "ko")),
                         probatio.Required("setup_type"): SelectSelector(
                             SelectSelectorConfig(
                                 options=[
                                     {"value": "timer", "label": "Assist Timer"},
+                                    {"value": "language", "label": "Language settings"},
                                     {"value": "weather", "label": "Assist Weather"},
+                                    {"value": "emergency", "label": "Assist Emergency Contact"},
                                     {"value": "google_speaker", "label": "Assist + Google Speaker"},
                                 ],
                                 mode=SelectSelectorMode.DROPDOWN,
@@ -205,6 +236,19 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     }
                 ),
             )
+        # Persist global language once and apply it to active providers; related: runtime.py.
+        if "setup_type" in user_input and CONF_LANGUAGE in user_input:
+            runtime = self.hass.data.get(DOMAIN)
+            if runtime is not None:
+                await runtime.language_store.async_save({CONF_LANGUAGE: user_input[CONF_LANGUAGE]})
+                runtime.language = user_input[CONF_LANGUAGE]
+        if user_input.get("setup_type") == "language":
+            return self.async_abort(reason="language_updated")
+        # Route emergency setup; related: emergency_tools.py and translations.
+        if user_input.get("setup_type") == "emergency":
+            return await self.async_step_emergency()
+        if user_input.get("setup_type") == "weather":
+            return await self.async_step_weather()
         if user_input.get("setup_type") == "weather" or "weather_entity" in user_input:
             return await self.async_step_weather(
                 {key: value for key, value in user_input.items() if key != "setup_type"} or None
@@ -256,28 +300,98 @@ class AssistTimersConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reconfigure(self, user_input=None):
         """Change the player without silently transferring a live timer."""
         entry = self._get_reconfigure_entry()
+        if CONF_EMERGENCY_ACTION in entry.data:
+            return await self.async_step_emergency(user_input, entry=entry)
+        if CONF_WEATHER_ENTITY in entry.data:
+            return await self.async_step_reconfigure_language(user_input)
         if CONF_SATELLITE not in entry.data:
             return self.async_abort(reason="unsupported_entry")
         google_speaker = entry.data.get(CONF_GOOGLE_SPEAKER, False)
         errors = {}
         if user_input is not None:
+            binding = {key: value for key, value in user_input.items() if key != CONF_LANGUAGE}
             try:
-                device_id = validate(self.hass, {**entry.data, **user_input}, entry.entry_id)
+                device_id = validate(self.hass, {**entry.data, **binding}, entry.entry_id)
                 if device_id != entry.unique_id:
                     raise TimerError("cannot_change_satellite")
                 runtime = self.hass.data.get(DOMAIN)
                 endpoint = runtime.endpoints.get(entry.entry_id) if runtime else None
-                if endpoint and endpoint.manager.timer is not None:
+                if (
+                    endpoint
+                    and endpoint.manager.timer is not None
+                    and any(entry.data.get(key) != value for key, value in binding.items())
+                ):
                     raise TimerError("cancel_timer_before_reconfigure")
             except TimerError as err:
                 errors["base"] = str(err)
             else:
-                return self.async_update_reload_and_abort(entry, data_updates=user_input)
+                await self._async_save_language(user_input)
+                if all(entry.data.get(key) == value for key, value in binding.items()):
+                    return self.async_abort(reason="reconfigure_successful")
+                return self.async_update_reload_and_abort(entry, data_updates=binding)
+        language = getattr(self.hass.data.get(DOMAIN), "language", "ko")
+        binding_schema = schema(user_input or entry.data, google_speaker=google_speaker)
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=schema(user_input or entry.data, google_speaker=google_speaker),
+            data_schema=probatio.Schema({**language_field(language), **binding_schema.schema}),
             errors=errors,
         )
+
+    async def async_step_reconfigure_language(self, user_input=None):
+        """Change the shared output language from an existing weather entry."""
+        if user_input is not None:
+            await self._async_save_language(user_input)
+            return self.async_abort(reason="reconfigure_successful")
+        language = getattr(self.hass.data.get(DOMAIN), "language", "ko")
+        return self.async_show_form(
+            step_id="reconfigure_language", data_schema=probatio.Schema(language_field(language))
+        )
+
+    # Bind one registered Companion App action; related: emergency_tools.py and translations.
+    async def async_step_emergency(self, user_input=None, *, entry=None):
+        actions = mobile_app_actions(self.hass)
+        # Keep an unavailable existing destination selectable during language changes.
+        if entry is not None and entry.data[CONF_EMERGENCY_ACTION] not in actions:
+            actions.append(entry.data[CONF_EMERGENCY_ACTION])
+        if not actions:
+            return self.async_abort(reason="no_mobile_app_actions")
+        errors = {}
+        if user_input is not None:
+            action = user_input.get(CONF_EMERGENCY_ACTION)
+            if action in actions:
+                data = {CONF_EMERGENCY_ACTION: action}
+                if entry is not None:
+                    await self._async_save_language(user_input)
+                    if data == entry.data:
+                        return self.async_abort(reason="reconfigure_successful")
+                    return self.async_update_reload_and_abort(entry, data_updates=data)
+                await self.async_set_unique_id("assist_emergency_contact")
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(title="Assist Emergency Contact", data=data)
+            errors[CONF_EMERGENCY_ACTION] = "invalid_emergency_action"
+        default = entry.data[CONF_EMERGENCY_ACTION] if entry else None
+        return self.async_show_form(
+            step_id="reconfigure_emergency" if entry else "emergency",
+            data_schema=probatio.Schema(
+                {
+                    **(
+                        language_field(getattr(self.hass.data.get(DOMAIN), "language", "ko"))
+                        if entry
+                        else {}
+                    ),
+                    probatio.Required(
+                        CONF_EMERGENCY_ACTION, **({"default": default} if default in actions else {})
+                    ): SelectSelector(
+                        SelectSelectorConfig(options=actions, mode=SelectSelectorMode.DROPDOWN)
+                    )
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_reconfigure_emergency(self, user_input=None):
+        """Route the emergency form submission back to the selected entry."""
+        return await self.async_step_emergency(user_input, entry=self._get_reconfigure_entry())
 
     async def async_step_weather(self, user_input=None):
         """Select one unique weather entity for the Assist Weather provider."""

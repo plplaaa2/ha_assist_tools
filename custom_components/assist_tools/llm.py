@@ -15,7 +15,7 @@ from .climate_tools import AssistClimateAPI
 from .const import API_ID, DOMAIN, MAX_DURATION
 from .fan_tools import AssistFanAPI
 from .history_tools import AssistHistoryAPI
-from .timer_manager import TimerError, duration_text
+from .timer_manager import TimerError, timer_announcement
 
 # 프롬프트 간소화 및 위성/에러 라우팅 지침 유지; 연결 파일: test_tools_and_output.py, test_timer_manager.py
 PROMPT = """Use AssistTimers tools for countdowns; use AssistAlarms tools for clock-time alarms.
@@ -205,13 +205,9 @@ class TimerTool(llm.Tool):
             and self.operation != "create"
             and not result.get("skip_announcement", False)
         ):
-            duration = duration_text(result["duration_seconds"])
-            ending = {
-                "pause": "일시정지하였습니다.",
-                "resume": "재개하였습니다.",
-                "cancel": "중지하였습니다.",
-            }[self.operation]
-            message = f"설정한 {duration} 알람을 {ending}"
+            message = timer_announcement(
+                result["duration_seconds"], self.operation, getattr(runtime, "language", "ko")
+            )
         if message and not result.get("replayed", False):
             endpoint.queue_announcement(message, result["state"], result.get("timer_id"))
         return llm.ToolResult(

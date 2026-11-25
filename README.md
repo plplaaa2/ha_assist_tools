@@ -3,7 +3,7 @@
 [🇺🇸 English Version](./README.md) | [🇰🇷 한국어 버전](./README.ko.md)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-![version](https://img.shields.io/badge/version-v0.3.3-blue.svg?style=for-the-badge)
+![version](https://img.shields.io/badge/version-v0.3.4-blue.svg?style=for-the-badge)
 [![Built with Codex](https://img.shields.io/badge/Built%20with-OpenAI%20Codex-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/codex/)
 [![kofi](https://img.shields.io/badge/Ko--fi-Support%20Me-F16061?style=for-the-badge&logo=ko-fi)](https://ko-fi.com/plplaaa2)
 
@@ -11,6 +11,7 @@ A Home Assistant HACS custom integration that provides Assist timers, scheduled 
 
 ## Features
 
+- Send a Companion App notification from Assist when someone asks for emergency help.
 - Set timers and schedule device shutdowns
 - List, reschedule, or cancel device jobs by voice, and repeat device actions on selected weekdays
 - Set one-time or weekly clock alarms on the requesting satellite's speaker
@@ -31,7 +32,9 @@ Copy the entire `custom_components/assist_tools/` directory to the same path in 
 
 ## Setup
 
-When adding Assist Tools, choose **Assist Timer** for a satellite timer or **Assist Weather** to select a weather entity. Enable each desired provider in your existing LLM conversation agent.
+When adding Assist Tools, choose the feature to configure, including **Assist Timer**, **Assist Weather**, or **Assist Emergency Contact**. Enable each desired provider in your existing LLM conversation agent.
+
+Choose the shared output language on the first setup screen. It applies to timer announcements and emergency notifications across all entries and defaults to Korean. Change it from the reconfigure menu of any existing Assist Tools entry.
 
 ### Assist Timer setup
 
@@ -53,6 +56,17 @@ Choose **Assist + Google Speaker** when adding Assist Tools, then select the mic
 With **Assist Scheduled Control**, ask Assist to open the living room curtains at 7 AM on Mondays, Wednesdays, and Fridays, list curtain schedules, move the next run to 8 AM, or remove Wednesdays from the recurring schedule. Weekly rules use Home Assistant local time. A next-run override must precede the following regular run. Cancelling a weekly schedule cancels the series.
 
 Timer alarms play on the Google speaker. The satellite can run timer and scheduled control commands without announcement support. For regular Assist replies on the same speaker, forward the URL from ESPHome's `on_tts_end` to Home Assistant's `media_player.play_media`. The Google speaker must be able to reach Home Assistant's internal URL.
+
+### Assist Emergency Contact setup
+
+Choose **Assist Emergency Contact** when adding Assist Tools and select the receiving device's
+`notify.mobile_app_*` action. Enable **Assist Emergency Contact** in your existing LLM
+conversation agent. Use the integration's reconfigure menu to change the receiving device.
+
+Direct pleas such as “살려줘”, “구해줘”, “Help me”, and “SOS” request a notification
+immediately. The LLM conversation agent judges requests in any language, so recognition varies
+by model. Assist reports whether Home Assistant ran the action. Check the receiving device
+to verify delivery.
 
 ## License
 
