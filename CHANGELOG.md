@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5] - 2026-11-25
+
+### Bug Fixes
+
+- Show the configured weather entity and emergency notification recipient in their respective settings dialogs.
+- Allow the conversation agent to recognize direct emergency requests across languages and phrasings.
+
 ## [0.3.4] - 2026-11-24
 
 - Add Assist Emergency Contact. Select a registered Home Assistant Companion App notification action when setting up the integration and enable the provider in your LLM conversation agent.
