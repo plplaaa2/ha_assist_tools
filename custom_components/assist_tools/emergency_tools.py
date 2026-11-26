@@ -100,13 +100,10 @@ class AssistEmergencyAPI(llm.API):
         return llm.APIInstance(
             api=self,
             api_prompt=(
-                "Assess the latest user message in any language and its context for a direct "
-                "request for urgent help or rescue, including ambiguous immediate pleas such as "
-                "'살려줘', '구해줘', 'Help me', 'Save me', or 'SOS'. Immediately call "
-                "assist_emergency__notify once without asking for confirmation. Do not call for "
-                "quoted, hypothetical, negated, or ordinary requests for assistance, such as "
-                "help with homework or moving furniture. Report the actual tool result. A submitted "
-                "result means Home Assistant accepted the call, not that a phone received it."
+                "Use the latest message and context to identify direct urgent pleas in any "
+                "language (살려줘, 구해줘, Help me, SOS). Call assist_emergency__notify once "
+                "immediately without confirmation. Exclude quotes, hypotheticals, negations "
+                "and routine help. Report the tool result; submitted confirms HA acceptance only."
             ),
             llm_context=llm_context,
             tools=[EmergencyTool(self._action)],
