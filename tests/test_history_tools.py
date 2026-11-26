@@ -1,5 +1,6 @@
 """Check Recorder history contracts and limits; related files: history_tools/llm."""
 
+import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -180,10 +181,15 @@ def test_default_period_and_seven_day_boundary(history):
 
 
 async def test_provider_read_only_targets_and_time_zone(history, hass, ha_contract):
+    for entity in ("fan.second", "fan.hidden"):
+        hass.state_values[entity] = SimpleNamespace(entity_id=entity, name="공기청정기")
+    hass.exposed.add("fan.second")
     api = history.module.AssistHistoryAPI(hass, "assist_history", "Assist History")
     result = await api.async_get_api_instance(ha_contract.LLMContext(None))
     assert len(result.tools) == 1 and result.tools[0].annotations.read_only
-    assert "Asia/Seoul" in result.api_prompt and "공기청정기" in result.api_prompt
+    assert "Asia/Seoul" in result.api_prompt
+    catalog = result.api_prompt.removeprefix(history.module.PROMPT).splitlines()[0]
+    assert json.loads(catalog) == {"fan.purifier": "공기청정기", "fan.second": "공기청정기"}
     hass.exposed.clear()
     assert not (await api.async_get_api_instance(ha_contract.LLMContext(None))).tools
 

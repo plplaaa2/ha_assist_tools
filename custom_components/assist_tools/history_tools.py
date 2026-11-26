@@ -203,8 +203,9 @@ class HistoryTool(llm.Tool):
 class AssistHistoryAPI(llm.API):
     """Select history independently; related files: llm registration and manifest."""
 
+    # Pack entity IDs and names for the prompt; see tests/test_history_tools.py.
     async def async_get_api_instance(self, llm_context):
-        targets = []
+        targets: dict[str, str] = {}
         for state in self.hass.states.async_all():
             try:
                 await authorize(
@@ -212,7 +213,7 @@ class AssistHistoryAPI(llm.API):
                 )
             except TimerError:
                 continue
-            targets.append({"entity_id": state.entity_id, "name": state.name})
+            targets[state.entity_id] = state.name
         zone = await dt_util.async_get_time_zone(self.hass.config.time_zone)
         return llm.APIInstance(
             api=self,
@@ -225,5 +226,5 @@ class AssistHistoryAPI(llm.API):
             + datetime.now(zone).isoformat()
             + "\nIncluded historical attributes: "
             + ", ".join(ATTRIBUTES),
-            tools=[HistoryTool([target["entity_id"] for target in targets])] if targets else [],
+            tools=[HistoryTool(list(targets))] if targets else [],
         )
