@@ -41,7 +41,7 @@ class AlarmTool(llm.Tool):
 
     integration = DOMAIN
 
-    def __init__(self, operation: str, satellites: list[str] | None = None) -> None:
+    def __init__(self, operation: str, *, include_satellite: bool = False) -> None:
         self.operation = operation
         suffix, self.description = {
             "create": ("Create", "Set a one-time clock alarm on this speaker."),
@@ -65,10 +65,11 @@ class AlarmTool(llm.Tool):
             "stop": {},
             "list": {},
         }[operation]
-        if satellites:
+        # Keep the catalog in the provider prompt; runtime.py validates the selected ID.
+        if include_satellite:
             fields = {
                 **fields,
-                probatio.Optional("satellite"): probatio.In(satellites),
+                probatio.Optional("satellite"): probatio.All(str, probatio.Length(min=1)),
             }
         self.parameters = probatio.Schema(fields)
         self.annotations = llm.ToolAnnotations(
@@ -107,7 +108,7 @@ class TimerTool(llm.Tool):
 
     integration = DOMAIN
 
-    def __init__(self, operation: str, satellites: list[str] | None = None) -> None:
+    def __init__(self, operation: str, *, include_satellite: bool = False) -> None:
         self.operation = operation
         self.name = f"AssistTimers{operation.title()}"
         self.title = f"Assist timer: {operation}"
@@ -142,10 +143,11 @@ class TimerTool(llm.Tool):
                 ): probatio.All(str, probatio.Length(min=1, max=64))
             }
         )
-        if satellites:
+        # Keep the catalog in the provider prompt; runtime.py validates the selected ID.
+        if include_satellite:
             self.parameters = self.parameters.extend(
                 {
-                    probatio.Optional("satellite"): probatio.In(satellites)
+                    probatio.Optional("satellite"): probatio.All(str, probatio.Length(min=1))
                 }
             )
         self.annotations = llm.ToolAnnotations(
@@ -217,18 +219,21 @@ class AssistTimersAPI(llm.API):
         try:
             runtime.for_device(llm_context.device_id)
         except TimerError:
-            satellites = [ep.output.satellite for ep in live]
+            include_satellite = bool(live)
         else:
-            satellites = None
+            include_satellite = False
         tools = (
-            [TimerTool(op, satellites) for op in ("create", "pause", "resume", "cancel", "status")]
+            [
+                TimerTool(op, include_satellite=include_satellite)
+                for op in ("create", "pause", "resume", "cancel", "status")
+            ]
             if live
             else []
         )
         alarm_prompt = ""
         if any(getattr(ep, "alarms", None) is not None for ep in live):
             tools.extend(
-                AlarmTool(op, satellites)
+                AlarmTool(op, include_satellite=include_satellite)
                 for op in ("create", "create_weekly", "list", "reschedule", "cancel", "stop")
             )
             alarm_prompt = ALARM_PROMPT
@@ -262,11 +267,10 @@ class AssistDevicesAPI(llm.API):
             user_id = getattr(llm_context.context, "user_id", None)
             devices = await runtime.control.targets(user_id)
             if devices:
-                entities = [device["entity_id"] for device in devices]
                 tools.extend(
                     [
-                        ActionTool("schedule_action", entities),
-                        ActionTool("schedule_weekly_action", entities),
+                        ActionTool("schedule_action"),
+                        ActionTool("schedule_weekly_action"),
                     ]
                 )
             tools.extend(

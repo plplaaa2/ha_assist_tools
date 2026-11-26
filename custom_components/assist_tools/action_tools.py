@@ -92,7 +92,7 @@ class ActionTool(llm.Tool):
 
     integration = DOMAIN
 
-    def __init__(self, operation: str, entities: list[str] | None = None) -> None:
+    def __init__(self, operation: str) -> None:
         self.operation = operation
         suffix = {
             "schedule_action": "Create",
@@ -112,8 +112,9 @@ class ActionTool(llm.Tool):
         }[operation]
         fields = {}
         if operation in ("schedule_action", "schedule_weekly_action"):
+            # Keep the catalog in llm.py; device_control.py validates the selected ID.
             fields = {
-                probatio.Required("entity_id"): probatio.In(entities or []),
+                probatio.Required("entity_id"): str,
                 probatio.Required("action"): probatio.In(SCHEDULED_ACTIONS),
             }
             if operation == "schedule_weekly_action":

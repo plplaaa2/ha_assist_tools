@@ -53,6 +53,23 @@ async def test_clock_alarm_is_saved_for_the_requesting_speaker(load_module, hass
             hass, ha_contract.ToolInput(create.name, args), ha_contract.LLMContext(None)
         )
         assert text.data["error"] == "target_satellite_required"
+        text_context = ha_contract.LLMContext(None)
+        text_instance = await api.async_get_api_instance(text_context)
+        for tool_name, tool_args in (
+            ("AssistAlarmsCreate", args),
+            ("AssistTimersCreate", {"duration_seconds": 30}),
+        ):
+            tool = next(tool for tool in text_instance.tools if tool.name == tool_name)
+            bad_args = tool.parameters({**tool_args, "satellite": "assist_satellite.missing"})
+            rejected = await tool.async_call(
+                hass, ha_contract.ToolInput(tool.name, bad_args), text_context
+            )
+            assert rejected.error and rejected.data["error"] == "target_satellite_not_configured"
+        status = next(tool for tool in text_instance.tools if tool.name == "AssistAlarmsList")
+        selected = status.parameters({"satellite": "assist_satellite.bedroom"})
+        assert not (
+            await status.async_call(hass, ha_contract.ToolInput(status.name, selected), text_context)
+        ).error
         result = await create.async_call(
             hass, ha_contract.ToolInput(create.name, create.parameters(args)), context
         )
