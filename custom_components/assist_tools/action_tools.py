@@ -31,10 +31,8 @@ avoid replaying uncertain calls.
 def weekly_fields(*, required: bool) -> dict:
     marker = probatio.Required if required else probatio.Optional
     return {
-        marker("weekdays", description="Selected weekdays, such as [mon, wed, fri]."): [
-            probatio.In(WEEKDAYS)
-        ],
-        marker("at_time", description="Regular time in Home Assistant local time (HH:MM)."): str,
+        marker("weekdays"): [probatio.In(WEEKDAYS)],
+        marker("at_time", description="HH:MM in HA local time."): str,
     }
 
 
@@ -42,11 +40,9 @@ RESCHEDULE_FIELDS = {
     probatio.Required("job_id", description="Exact pending job ID from List."): str,
     probatio.Optional(
         "execute_at",
-        description="New execution date/time or next-only override, ISO 8601 with UTC offset.",
+        description="ISO 8601 with UTC offset.",
     ): str,
-    probatio.Optional(
-        "delay_seconds", description="Alternative next execution delay, in seconds from now."
-    ): probatio.All(int, probatio.Range(min=1, max=MAX_DURATION)),
+    probatio.Optional("delay_seconds"): probatio.All(int, probatio.Range(min=1, max=MAX_DURATION)),
     **weekly_fields(required=False),
 }
 
@@ -117,24 +113,15 @@ class ActionTool(llm.Tool):
         fields = {}
         if operation in ("schedule_action", "schedule_weekly_action"):
             fields = {
-                probatio.Required(
-                    "entity_id",
-                    description="Exact exposed device entity ID to control when the delay ends.",
-                ): probatio.In(entities or []),
-                probatio.Required(
-                    "action",
-                    description="Action listed for this target.",
-                ): probatio.In(SCHEDULED_ACTIONS),
+                probatio.Required("entity_id"): probatio.In(entities or []),
+                probatio.Required("action"): probatio.In(SCHEDULED_ACTIONS),
             }
             if operation == "schedule_weekly_action":
                 fields.update(weekly_fields(required=True))
             else:
-                fields[
-                    probatio.Required(
-                        "delay_seconds",
-                        description="Delay from now in seconds.",
-                    )
-                ] = probatio.All(int, probatio.Range(min=1, max=MAX_DURATION))
+                fields[probatio.Required("delay_seconds")] = probatio.All(
+                    int, probatio.Range(min=1, max=MAX_DURATION)
+                )
         elif operation == "reschedule_action":
             fields = RESCHEDULE_FIELDS
         elif operation == "cancel_action":

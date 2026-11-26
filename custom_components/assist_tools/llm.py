@@ -68,9 +68,7 @@ class AlarmTool(llm.Tool):
         if satellites:
             fields = {
                 **fields,
-                probatio.Optional(
-                    "satellite", description="Configured satellite for the selected speaker."
-                ): probatio.In(satellites),
+                probatio.Optional("satellite"): probatio.In(satellites),
             }
         self.parameters = probatio.Schema(fields)
         self.annotations = llm.ToolAnnotations(
@@ -122,10 +120,9 @@ class TimerTool(llm.Tool):
         }[operation]
         self.parameters = probatio.Schema(
             {
-                probatio.Optional(
-                    "duration_seconds",
-                    description="Duration in seconds.",
-                ): probatio.All(int, probatio.Range(min=1, max=MAX_DURATION)),
+                probatio.Optional("duration_seconds"): probatio.All(
+                    int, probatio.Range(min=1, max=MAX_DURATION)
+                ),
                 probatio.Optional("hours"): probatio.All(int, probatio.Range(min=0, max=168)),
                 probatio.Optional("minutes"): probatio.All(int, probatio.Range(min=0, max=10080)),
                 probatio.Optional("seconds"): probatio.All(
@@ -148,10 +145,7 @@ class TimerTool(llm.Tool):
         if satellites:
             self.parameters = self.parameters.extend(
                 {
-                    probatio.Optional(
-                        "satellite",
-                        description="Exact satellite entity ID to target when calling from text.",
-                    ): probatio.In(satellites)
+                    probatio.Optional("satellite"): probatio.In(satellites)
                 }
             )
         self.annotations = llm.ToolAnnotations(

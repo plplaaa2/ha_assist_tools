@@ -142,17 +142,14 @@ class HistoryTool(llm.Tool):
     def __init__(self, entities):
         self.parameters = probatio.Schema(
             {
-                probatio.Required(
-                    "entity_id",
-                    description="Exposed, readable entity ID.",
-                ): probatio.In(entities),
+                probatio.Required("entity_id"): probatio.In(entities),
                 probatio.Optional(
                     "start_time",
-                    description="Inclusive ISO 8601 timestamp with UTC offset. Default 24 hours before end_time.",
+                    description="Inclusive ISO 8601 with UTC offset. Default: end_time minus 24h.",
                 ): str,
                 probatio.Optional(
                     "end_time",
-                    description="Exclusive ISO 8601 timestamp with UTC offset; default now. No future dates.",
+                    description="Exclusive ISO 8601 with UTC offset. Default and latest: now.",
                 ): str,
                 probatio.Optional("limit", default=100): probatio.All(
                     int, probatio.Range(min=1, max=100)

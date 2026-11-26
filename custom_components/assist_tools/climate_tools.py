@@ -93,20 +93,12 @@ class ClimateTool(llm.Tool):
             "status": "Read a climate device's current HVAC/fan modes and device-specific supported options without changing it.",
         }[operation]
         fields = {
-            probatio.Required(
-                "entity_id",
-                description="Exposed climate entity ID.",
-            ): probatio.In([t["entity_id"] for t in targets])
+            probatio.Required("entity_id"): probatio.In([t["entity_id"] for t in targets])
         }
         if operation != "status":
             key = "hvac_mode" if operation == "hvac" else "fan_mode"
             options = sorted({mode for target in targets for mode in target[key + "s"]})
-            fields[
-                probatio.Required(
-                    key,
-                    description="Mode listed for this entity.",
-                )
-            ] = probatio.In(options)
+            fields[probatio.Required(key)] = probatio.In(options)
         self.parameters = probatio.Schema(fields)
         self.annotations = llm.ToolAnnotations(
             read_only=operation == "status", destructive=False, idempotent=True, open_world=False
