@@ -7,6 +7,12 @@
 - Show the configured weather entity and emergency notification recipient in their respective settings dialogs.
 - Allow the conversation agent to recognize direct emergency requests across languages and phrasings.
 
+### Performance
+
+- Reduce LLM prompt size across Assist tool providers by shortening instructions and removing repeated tool and parameter descriptions.
+- Compact the Assist History device list while retaining each entity ID and display name.
+- List scheduled devices and timer/alarm satellites once in their provider prompts. Validate selected targets when tools are called, including device exposure, control permissions, and voice satellite routing.
+
 ## [0.3.4] - 2026-11-24
 
 - Add Assist Emergency Contact. Select a registered Home Assistant Companion App notification action when setting up the integration and enable the provider in your LLM conversation agent.
