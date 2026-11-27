@@ -14,22 +14,16 @@ from .scheduled_actions import SCHEDULED_ACTIONS, WEEKDAYS
 from .timer_manager import TimerError
 
 # Guide delayed device and cover control; related: llm.py, test_scheduled_actions.py.
-ACTION_PROMPT = """For delayed device control, use AssistScheduledControl tools; never alarm timers.
-Use open_cover or close_cover for covers. Choose from the target's listed actions.
-Ask if target is ambiguous. Separate action times require separate jobs.
-Alarm cancellation does not cancel device jobs. Confirm reservations or
-cancellations in Korean, not that the device already changed state.
-Never replay uncertain execution or claim success on error.
-List jobs before identifying one to cancel or change. Match a pending job by device,
-action and existing local execution date/time. If several match, read their local
-times and ask which one. Use the exact job_id internally. When listing weekly jobs,
-say the selected weekdays, regular local time, and next execution in Korean.
-For weekly creation, expand weekdays to mon-fri, weekends to sat-sun, and daily to all seven days.
-For "next occurrence only", set execute_at or delay_seconds. For changes to the
-weekly rule, send at_time and/or the complete resulting weekdays list. Clarify
-the scope when ambiguous. Cancelling a weekly job cancels the entire series.
-Use now_local and time_zone from List to resolve relative dates. A next-only
-override must precede the following regular occurrence.
+ACTION_PROMPT = """Use scheduled control for delayed device actions, separate from alarms. Ask if
+target is ambiguous. Use a listed action (open_cover/close_cover for covers) and
+one job per execution time. List before changes or cancellation; match pending
+jobs by device, action and existing local time. Read matching times and clarify
+ties. Use the exact job_id. List weekly days, regular local time and next run.
+Weekdays=mon-fri, weekends=sat-sun, daily=all seven. Use List's now_local/time_zone.
+Next-only: execute_at or delay_seconds before the following regular run. Weekly
+rule: at_time and/or full resulting weekdays. Clarify scope. Cancel removes the
+series. In Korean, confirm scheduling or cancellation only. Report errors and
+avoid replaying uncertain calls.
 """
 
 
@@ -37,22 +31,18 @@ override must precede the following regular occurrence.
 def weekly_fields(*, required: bool) -> dict:
     marker = probatio.Required if required else probatio.Optional
     return {
-        marker("weekdays", description="Selected weekdays, such as [mon, wed, fri]."): [
-            probatio.In(WEEKDAYS)
-        ],
-        marker("at_time", description="Regular time in Home Assistant local time (HH:MM)."): str,
+        marker("weekdays"): [probatio.In(WEEKDAYS)],
+        marker("at_time", description="HH:MM in HA local time."): str,
     }
 
 
 RESCHEDULE_FIELDS = {
-    probatio.Required("job_id", description="Exact pending scheduled device job ID."): str,
+    probatio.Required("job_id", description="Exact pending job ID from List."): str,
     probatio.Optional(
         "execute_at",
-        description="New execution date/time or next-only override, ISO 8601 with UTC offset.",
+        description="ISO 8601 with UTC offset.",
     ): str,
-    probatio.Optional(
-        "delay_seconds", description="Alternative next execution delay, in seconds from now."
-    ): probatio.All(int, probatio.Range(min=1, max=MAX_DURATION)),
+    probatio.Optional("delay_seconds"): probatio.All(int, probatio.Range(min=1, max=MAX_DURATION)),
     **weekly_fields(required=False),
 }
 
@@ -102,7 +92,7 @@ class ActionTool(llm.Tool):
 
     integration = DOMAIN
 
-    def __init__(self, operation: str, entities: list[str] | None = None) -> None:
+    def __init__(self, operation: str) -> None:
         self.operation = operation
         suffix = {
             "schedule_action": "Create",
@@ -122,32 +112,24 @@ class ActionTool(llm.Tool):
         }[operation]
         fields = {}
         if operation in ("schedule_action", "schedule_weekly_action"):
+            # Keep the catalog in llm.py; device_control.py validates the selected ID.
             fields = {
-                probatio.Required(
-                    "entity_id",
-                    description="Exact exposed device entity ID to control when the delay ends.",
-                ): probatio.In(entities or []),
-                probatio.Required(
-                    "action",
-                    description="A listed action for the target: turn_on, turn_off, open_cover, or close_cover.",
-                ): probatio.In(SCHEDULED_ACTIONS),
+                probatio.Required("entity_id"): str,
+                probatio.Required("action"): probatio.In(SCHEDULED_ACTIONS),
             }
             if operation == "schedule_weekly_action":
                 fields.update(weekly_fields(required=True))
             else:
-                fields[
-                    probatio.Required(
-                        "delay_seconds",
-                        description="Delay from now in seconds, from 1 to 604800; never execute immediately.",
-                    )
-                ] = probatio.All(int, probatio.Range(min=1, max=MAX_DURATION))
+                fields[probatio.Required("delay_seconds")] = probatio.All(
+                    int, probatio.Range(min=1, max=MAX_DURATION)
+                )
         elif operation == "reschedule_action":
             fields = RESCHEDULE_FIELDS
         elif operation == "cancel_action":
             fields = {
                 probatio.Required(
                     "job_id",
-                    description="Exact scheduled control job_id returned by Create or List; not an alarm timer ID.",
+                    description="Exact pending device job ID from Create or List.",
                 ): probatio.All(str, probatio.Length(min=1, max=64))
             }
         self.parameters = probatio.Schema(fields)

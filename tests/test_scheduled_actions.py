@@ -84,8 +84,8 @@ async def test_weekly_assist_override_preserves_remaining_weekdays(
     hass.data["assist_tools"] = runtime
     tools = load_module("action_tools")
 
-    async def call(operation, args, entities=None):
-        tool = tools.ActionTool(operation, entities)
+    async def call(operation, args):
+        tool = tools.ActionTool(operation)
         result = await tool.async_call(
             hass,
             ha_contract.ToolInput(tool.name, tool.parameters(args)),
@@ -102,7 +102,6 @@ async def test_weekly_assist_override_preserves_remaining_weekdays(
             "weekdays": ["fri", "wed", "mon"],
             "at_time": "07:00",
         },
-        ["light.room"],
     )
     job_id = created["job_id"]
     assert created["weekdays"] == ["mon", "wed", "fri"]
@@ -291,6 +290,28 @@ async def test_device_checks_exposure_at_execution(device, scheduler, hass):
     hass.services.async_call.assert_not_awaited()
 
 
+async def test_schedule_rejects_unlisted_targets_at_call(
+    device, scheduler, load_module, hass, ha_contract
+):
+    runtime = load_module("runtime").Runtime()
+    runtime.actions, runtime.control = scheduler.manager, device
+    hass.data["assist_tools"] = runtime
+    tool = load_module("action_tools").ActionTool("schedule_action")
+    hass.auth.async_get_user.return_value.permissions.check_entity = lambda *args: False
+    for entity_id, user_id, error in (
+        ("light.missing", None, "entity_not_found"),
+        ("light.room", "restricted-user", "entity_control_not_allowed"),
+        ("light.room", None, "entity_not_exposed"),
+    ):
+        if error == "entity_not_exposed":
+            hass.exposed.clear()
+        context = ha_contract.LLMContext(None, context=SimpleNamespace(user_id=user_id))
+        args = tool.parameters({"entity_id": entity_id, "action": "turn_off", "delay_seconds": 30})
+        result = await tool.async_call(hass, ha_contract.ToolInput(tool.name, args), context)
+        assert result.error and result.data["error"] == error
+    assert not scheduler.manager.jobs
+
+
 async def test_device_action_keeps_user_context(device, load_module, hass):
     job = load_module("scheduled_actions").ScheduledAction(
         "id", "light.room", "turn_off", 1, 1000, "user"
@@ -345,7 +366,7 @@ async def test_cover_schedule_and_restore(
     hass.data["assist_tools"] = runtime
     args = {"entity_id": entity_id, "action": action, "delay_seconds": 30}
     if action == "open_cover":
-        tool = load_module("action_tools").ActionTool("schedule_action", [entity_id])
+        tool = load_module("action_tools").ActionTool("schedule_action")
         result = await tool.async_call(
             hass,
             ha_contract.ToolInput(tool.name, tool.parameters(args)),
@@ -400,7 +421,7 @@ async def test_scheduler_independent_from_alarm_timer(
     runtime = load_module("runtime").Runtime()
     runtime.actions, runtime.control = scheduler.manager, device
     hass.data["assist_tools"] = runtime
-    tool = load_module("action_tools").ActionTool("schedule_action", ["light.room"])
+    tool = load_module("action_tools").ActionTool("schedule_action")
     result = await tool.async_call(
         hass,
         ha_contract.ToolInput(

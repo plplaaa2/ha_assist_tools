@@ -53,6 +53,23 @@ async def test_clock_alarm_is_saved_for_the_requesting_speaker(load_module, hass
             hass, ha_contract.ToolInput(create.name, args), ha_contract.LLMContext(None)
         )
         assert text.data["error"] == "target_satellite_required"
+        text_context = ha_contract.LLMContext(None)
+        text_instance = await api.async_get_api_instance(text_context)
+        for tool_name, tool_args in (
+            ("AssistAlarmsCreate", args),
+            ("AssistTimersCreate", {"duration_seconds": 30}),
+        ):
+            tool = next(tool for tool in text_instance.tools if tool.name == tool_name)
+            bad_args = tool.parameters({**tool_args, "satellite": "assist_satellite.missing"})
+            rejected = await tool.async_call(
+                hass, ha_contract.ToolInput(tool.name, bad_args), text_context
+            )
+            assert rejected.error and rejected.data["error"] == "target_satellite_not_configured"
+        status = next(tool for tool in text_instance.tools if tool.name == "AssistAlarmsList")
+        selected = status.parameters({"satellite": "assist_satellite.bedroom"})
+        assert not (
+            await status.async_call(hass, ha_contract.ToolInput(status.name, selected), text_context)
+        ).error
         result = await create.async_call(
             hass, ha_contract.ToolInput(create.name, create.parameters(args)), context
         )
@@ -183,6 +200,32 @@ async def test_sound_options_save_independent_local_audio(load_module, hass):
         {"timer_sound": {"media_content_id": "https://example.com/a.mp3"}}
     )
     assert rejected["errors"] == {"timer_sound": "invalid_alarm_sound"}
+
+
+@pytest.mark.parametrize(
+    ("data", "reason", "placeholders"),
+    [
+        ({"weather_entity": "weather.home"}, "weather_settings", {"entity_id": "weather.home"}),
+        (
+            {"emergency_notify_action": "notify.mobile_app_phone"},
+            "emergency_settings",
+            {"notify_action": "notify.mobile_app_phone"},
+        ),
+    ],
+)
+async def test_non_satellite_options_show_configured_destination(
+    load_module, data, reason, placeholders
+):
+    config = load_module("config_flow")
+    entry = SimpleNamespace(data=data)
+    flow = config.AssistTimersConfigFlow.async_get_options_flow(entry)
+    flow.config_entry = entry
+    flow.async_abort = lambda **kwargs: kwargs
+
+    assert await flow.async_step_init() == {
+        "reason": reason,
+        "description_placeholders": placeholders,
+    }
 
 
 @pytest.fixture
@@ -570,7 +613,7 @@ def test_metadata_and_translations_match():
     base = ROOT / "custom_components/assist_tools"
     manifest = json.loads((base / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["domain"] == base.name == "assist_tools"
-    assert manifest["version"] == "0.3.4" and manifest["config_flow"] is True
+    assert manifest["version"] == "0.3.5" and manifest["config_flow"] is True
     english = json.loads((base / "strings.json").read_text(encoding="utf-8"))
     korean = json.loads((base / "translations/ko.json").read_text(encoding="utf-8"))
     assert english["config"]["error"].keys() == korean["config"]["error"].keys()

@@ -16,10 +16,7 @@ class WeatherTool(llm.Tool):
 
     name = "assist_weather__get_weather"
     title = "날씨 조회"
-    description = (
-        "Get current conditions and the daily forecast from the configured Home Assistant weather entity. "
-        "Always call this tool before answering weather questions."
-    )
+    description = "Get current conditions and daily forecasts from Home Assistant."
     integration = "assist_tools"
     annotations = llm.ToolAnnotations(
         read_only=True, destructive=False, idempotent=True, open_world=False
@@ -105,9 +102,7 @@ class AssistWeatherAPI(llm.API):
             api=self,
             api_prompt=(
                 "Call assist_weather__get_weather before answering weather questions. "
-                "It returns current conditions and the daily forecast from the configured weather entity. "
-                "Give practical advice supported by the returned conditions and forecast; "
-                "do not infer conditions or risks absent from the result."
+                "Base advice and risk statements on the returned data."
             ),
             llm_context=llm_context,
             tools=[WeatherTool(self._entity_id)],

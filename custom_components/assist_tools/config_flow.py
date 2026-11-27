@@ -147,6 +147,18 @@ class AlarmSoundOptions(config_entries.OptionsFlow):
     """Edit sounds for the configured player without reconfiguring its binding."""
 
     async def async_step_init(self, user_input=None):
+        # Show configured destinations for non-satellite entries; related: translations.
+        data = self.config_entry.data
+        if CONF_WEATHER_ENTITY in data:
+            return self.async_abort(
+                reason="weather_settings",
+                description_placeholders={"entity_id": data[CONF_WEATHER_ENTITY]},
+            )
+        if CONF_EMERGENCY_ACTION in data:
+            return self.async_abort(
+                reason="emergency_settings",
+                description_placeholders={"notify_action": data[CONF_EMERGENCY_ACTION]},
+            )
         if CONF_SATELLITE not in self.config_entry.data:
             return self.async_abort(reason="unsupported_entry")
         errors = {}

@@ -37,7 +37,7 @@ assist_timers/
         |-- weather_tools.py        # Selected weather entity conditions and daily forecast provider
         |-- device_control.py       # Assist exposure, permissions, power capabilities
         |-- emergency_tools.py     # Emergency request guidance and Companion App notification
-        |-- manifest.json           # HA metadata, config flow, version 0.3.4
+        |-- manifest.json           # HA metadata, config flow, version 0.3.5
         |-- runtime.py              # Device routing, deduplication, confirmations
         |-- satellite.py            # Announce speech and normal-media play/stop
         |-- scheduled_actions.py    # Durable delayed device on/off jobs
